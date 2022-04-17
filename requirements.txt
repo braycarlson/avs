@@ -1,0 +1,12 @@
+-e avs
+
+librosa
+natsort
+noisereduce
+numba==0.53.*
+numpy==1.22.0
+pandas
+PySide2
+pysimplegui
+scipy
+seaborn
