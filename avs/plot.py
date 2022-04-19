@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import PySimpleGUI as sg
 
 from action import get_metadata
+from constant import ICON
 from dataclass.signal import Signal
 from dataclass.spectrogram import Spectrogram
 from event import on_click
@@ -175,6 +176,8 @@ def plot_exclusion(window, data):
         sg.Popup(
             'Please adjust the parameter(s)',
             title='Error',
+            icon=ICON,
+            button_color='#242424',
             keep_on_top=True
         )
 
@@ -183,6 +186,8 @@ def plot_exclusion(window, data):
         sg.Popup(
             'Please adjust the parameter(s)',
             title='Error',
+            icon=ICON,
+            button_color='#242424',
             keep_on_top=True
         )
 

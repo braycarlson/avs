@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 import os
 import pandas as pd
 import PySimpleGUI as sg
-import string
 
 from action import (
     backward,
@@ -14,22 +13,26 @@ from action import (
 )
 from constant import (
     BASELINE,
-    CWD,
     FILE,
-    FILENAME
+    FILENAME,
+    ICON
 )
 from gui import layout
 from plot import draw, plot_bandwidth, plot_exclusion
-from validation import REMOVE, to_digit, to_exclusion, validate
+from validation import (
+    HIGH,
+    LOW,
+    REMOVE,
+    to_exclusion,
+    validate
+)
 
 
 def main():
-    icon = CWD.joinpath('asset/avs.ico')
-
     window = sg.Window(
         '',
         layout(),
-        icon=icon,
+        icon=ICON,
         size=(1600, 850),
         location=(100, 75),
         element_justification='center',
@@ -94,15 +97,18 @@ def main():
             element = window.find_element_with_focus()
 
             if isinstance(element, sg.PySimpleGUI.Input):
-                punctuation = ['-', '.', ',', ' ']
+                ui = data[element.key]
 
-                for character in data[element.key]:
-                    if (character not in string.digits and
-                            character not in punctuation):
-                        numerical = to_digit(data[element.key])
-                        window[element.key].update(numerical)
-
-                        continue
+                if element.key in LOW:
+                    window['spectral_range_low'].update(ui)
+                    window['mel_lower_edge_hertz'].update(ui)
+                    window['butter_lowcut'].update(ui)
+                elif element.key in HIGH:
+                    window['spectral_range_high'].update(ui)
+                    window['mel_upper_edge_hertz'].update(ui)
+                    window['butter_highcut'].update(ui)
+                else:
+                    window[element.key].update(ui)
 
         if event == 'file':
             data['exclude'] = ''
@@ -144,6 +150,9 @@ def main():
             if item == '':
                 sg.Popup(
                     'Please select a file',
+                    title='Error',
+                    icon=ICON,
+                    button_color='#242424',
                     keep_on_top=True
                 )
 
@@ -176,6 +185,9 @@ def main():
             if item == '':
                 sg.Popup(
                     'Please select a file',
+                    title='Error',
+                    icon=ICON,
+                    button_color='#242424',
                     keep_on_top=True
                 )
 
@@ -195,6 +207,9 @@ def main():
             if item == '':
                 sg.Popup(
                     'Please select a file',
+                    title='Error',
+                    icon=ICON,
+                    button_color='#242424',
                     keep_on_top=True
                 )
 
@@ -212,6 +227,9 @@ def main():
             if item == '':
                 sg.Popup(
                     'Please select a file',
+                    title='Error',
+                    icon=ICON,
+                    button_color='#242424',
                     keep_on_top=True
                 )
 
@@ -226,6 +244,9 @@ def main():
             if len(FILENAME) == 0:
                 sg.Popup(
                     'Please open a file',
+                    title='Error',
+                    icon=ICON,
+                    button_color='#242424',
                     keep_on_top=True
                 )
 
@@ -254,6 +275,9 @@ def main():
             if len(FILENAME) == 0:
                 sg.Popup(
                     'Please open a file',
+                    title='Error',
+                    icon=ICON,
+                    button_color='#242424',
                     keep_on_top=True
                 )
 
@@ -284,6 +308,9 @@ def main():
             if item == '':
                 sg.Popup(
                     'Please select a file',
+                    title='Error',
+                    icon=ICON,
+                    button_color='#242424',
                     keep_on_top=True
                 )
 
@@ -300,6 +327,9 @@ def main():
             if item == '':
                 sg.Popup(
                     'Please select a file',
+                    title='Error',
+                    icon=ICON,
+                    button_color='#242424',
                     keep_on_top=True
                 )
 
@@ -314,6 +344,9 @@ def main():
             if item == '':
                 sg.Popup(
                     'Please select a file',
+                    title='Error',
+                    icon=ICON,
+                    button_color='#242424',
                     keep_on_top=True
                 )
 

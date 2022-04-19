@@ -1,6 +1,8 @@
 import PySimpleGUI as sg
 import string
 
+from constant import ICON
+
 
 # The input field to ignore
 IGNORE = (
@@ -59,14 +61,32 @@ BOOLEAN = (
     'mask_spec'
 )
 
+# The accepted punctuation for an input field
+PUNCTUATION = (
+    '-',
+    '.',
+    ',',
+    ' ',
+)
+
+LOW = (
+    'spectral_range_low',
+    'mel_lower_edge_hertz',
+    'butter_lowcut'
+)
+
+HIGH = (
+    'spectral_range_high',
+    'mel_upper_edge_hertz',
+    'butter_highcut'
+)
+
 
 def to_digit(data):
-    punctuation = ['-', '.', ',', ' ']
-
     numerical = [
         character
         for character in data
-        if character.isdigit() or character in punctuation
+        if character.isdigit() or character in PUNCTUATION
     ]
 
     return ''.join(numerical)
@@ -109,6 +129,9 @@ def validate(data):
             except ValueError:
                 sg.Popup(
                     f"{key} must be an bool",
+                    title='Error',
+                    icon=ICON,
+                    button_color='#242424',
                     keep_on_top=True
                 )
 
@@ -120,6 +143,9 @@ def validate(data):
             except ValueError:
                 sg.Popup(
                     f"{key} must be an integer",
+                    title='Error',
+                    icon=ICON,
+                    button_color='#242424',
                     keep_on_top=True
                 )
 
@@ -131,6 +157,9 @@ def validate(data):
             except ValueError:
                 sg.Popup(
                     f"{key} must be an float",
+                    title='Error',
+                    icon=ICON,
+                    button_color='#242424',
                     keep_on_top=True
                 )
 

@@ -201,35 +201,35 @@ def layout():
         ),
         parameter(
             'num_mel_bins',
-            tooltip=''
+            # tooltip=''
         ),
         parameter(
             'mel_lower_edge_hertz',
-            tooltip=''
+            # tooltip=''
         ),
         parameter(
             'mel_upper_edge_hertz',
-            tooltip=''
+            # tooltip=''
         ),
         parameter(
             'butter_lowcut',
-            tooltip=''
+            # tooltip=''
         ),
         parameter(
             'butter_highcut',
-            tooltip=''
+            # tooltip=''
         ),
         parameter(
             'bandpass_filter',
-            tooltip=''
+            # tooltip=''
         ),
         parameter(
             'reduce_noise',
-            tooltip=''
+            # tooltip=''
         ),
         parameter(
             'mask_spec',
-            tooltip=''
+            # tooltip=''
         ),
         parameter(
             'exclude',

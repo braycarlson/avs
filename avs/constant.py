@@ -16,6 +16,9 @@ CWD = Path.cwd().parent
 # The drive of the project
 ROOT = Path(CWD.anchor)
 
+# The icon for avs
+ICON = CWD.joinpath('asset/avs.ico')
+
 # The root directory for the package
 PACKAGE = CWD.joinpath('avs/avs')
 
