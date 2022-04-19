@@ -4,6 +4,7 @@ from constant import PACKAGE
 
 
 sg.theme('LightGrey1')
+sg.PySimpleGUI.TOOLTIP_BACKGROUND_COLOR = "#ffffff"
 
 
 def filelist():
@@ -22,7 +23,7 @@ def filelist():
             background_color='#ffffff',
             text_color='#242424',
             button_arrow_color='#242424',
-            button_background_color='white',
+            button_background_color='#ffffff',
             enable_events=True,
             readonly=True,
         ),
@@ -65,7 +66,7 @@ def mode():
             background_color='#ffffff',
             text_color='#242424',
             button_arrow_color='#242424',
-            button_background_color='white',
+            button_background_color='#ffffff',
             enable_events=True,
             readonly=True,
             default_value='Exclusion'
@@ -74,7 +75,10 @@ def mode():
 
 
 def parameter(name, **kwargs):
-    multi = kwargs.get('multi')
+    multi = False
+
+    if kwargs.get('multi'):
+        multi = kwargs.pop('multi')
 
     if multi:
         return [
@@ -90,7 +94,8 @@ def parameter(name, **kwargs):
                 key=name + '_' + 'low',
                 size=(22, 1),
                 text_color='#242424',
-                background_color='#ffffff'
+                background_color='#ffffff',
+                **kwargs
             ),
 
             sg.I(
@@ -98,7 +103,8 @@ def parameter(name, **kwargs):
                 key=name + '_' + 'high',
                 size=(22, 1),
                 text_color='#242424',
-                background_color='#ffffff'
+                background_color='#ffffff',
+                **kwargs
             )
         ]
     else:
@@ -137,31 +143,98 @@ def button(name, **kwargs):
 
 def layout():
     left = [
-        parameter('n_fft'),
-        parameter('hop_length_ms'),
-        parameter('win_length_ms'),
-        parameter('ref_level_db'),
-        parameter('preemphasis'),
-        parameter('min_level_db'),
-        parameter('min_level_db_floor'),
-        parameter('db_delta'),
-        parameter('silence_threshold'),
-        parameter('min_silence_for_spec'),
-        parameter('max_vocal_for_spec'),
+        parameter(
+            'n_fft',
+            tooltip='The size of the FFT window'
+        ),
+        parameter(
+            'hop_length_ms',
+            tooltip='The number of audio frames in ms between STFT columns'
+        ),
+        parameter(
+            'win_length_ms',
+            tooltip='The size of the FFT window in ms'
+        ),
+        parameter(
+            'ref_level_db',
+            tooltip='The reference level dB of audio'
+        ),
+        parameter(
+            'preemphasis',
+            tooltip='The coefficient for the preemphasis filter'
+        ),
+        parameter(
+            'min_level_db',
+            tooltip='The default dB minimum of the spectrogram and threshold anything below'
+        ),
+        parameter(
+            'min_level_db_floor',
+            tooltip='The highest number min_level_db is allowed to reach'
+        ),
+        parameter(
+            'db_delta',
+            tooltip='The delta in setting min_level_db'
+        ),
+        parameter(
+            'silence_threshold',
+            tooltip='The threshold for a spectrogram to consider noise as silence'
+        ),
+        parameter(
+            'min_silence_for_spec',
+            tooltip='The shortest expected length of silence in a recording, which is used to set dynamic threshold'
+        ),
+        parameter(
+            'max_vocal_for_spec',
+            tooltip='The longest expected vocalization in seconds'
+        ),
     ]
 
     right = [
-        parameter('min_syllable_length_s'),
-        parameter('spectral_range', multi=True),
-        parameter('num_mel_bins'),
-        parameter('mel_lower_edge_hertz'),
-        parameter('mel_upper_edge_hertz'),
-        parameter('butter_lowcut'),
-        parameter('butter_highcut'),
-        parameter('bandpass_filter'),
-        parameter('reduce_noise'),
-        parameter('mask_spec'),
-        parameter('exclude')
+        parameter(
+            'min_syllable_length_s',
+            tooltip='The shortest expected length of a syllable'
+        ),
+        parameter(
+            'spectral_range',
+            multi=True,
+            tooltip='The spectral range to care about for the spectrogram'
+        ),
+        parameter(
+            'num_mel_bins',
+            tooltip=''
+        ),
+        parameter(
+            'mel_lower_edge_hertz',
+            tooltip=''
+        ),
+        parameter(
+            'mel_upper_edge_hertz',
+            tooltip=''
+        ),
+        parameter(
+            'butter_lowcut',
+            tooltip=''
+        ),
+        parameter(
+            'butter_highcut',
+            tooltip=''
+        ),
+        parameter(
+            'bandpass_filter',
+            tooltip=''
+        ),
+        parameter(
+            'reduce_noise',
+            tooltip=''
+        ),
+        parameter(
+            'mask_spec',
+            tooltip=''
+        ),
+        parameter(
+            'exclude',
+            tooltip='A list of indices, which correspond to each segment of a recording'
+        )
     ]
 
     return [

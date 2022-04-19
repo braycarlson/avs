@@ -27,7 +27,7 @@ def main():
     icon = CWD.joinpath('asset/avs.ico')
 
     window = sg.Window(
-        'avs',
+        '',
         layout(),
         icon=icon,
         size=(1600, 850),
