@@ -23,6 +23,7 @@ from validation import (
     HIGH,
     LOW,
     REMOVE,
+    to_digit,
     to_exclusion,
     validate
 )
@@ -83,7 +84,14 @@ def main():
     else:
         window.bind('<Command-s>', 'save_shortcut')
 
+    # Detect keypress
     window.bind('<Key>', 'keypress')
+
+    # Left arrow
+    window.bind('<Left>', 'left')
+
+    # Right arrow
+    window.bind('<Right>', 'right')
 
     widget = None
 
@@ -97,7 +105,7 @@ def main():
             element = window.find_element_with_focus()
 
             if isinstance(element, sg.PySimpleGUI.Input):
-                ui = data[element.key]
+                ui = to_digit(data[element.key])
 
                 if element.key in LOW:
                     window['spectral_range_low'].update(ui)
