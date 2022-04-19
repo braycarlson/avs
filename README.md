@@ -1,6 +1,6 @@
 ## Animal Vocalization Segmentation (AVS)
 
-![avs](asset/logo.png?raw=true "AVS")
+![avs](asset/text.png?raw=true "AVS")
 
 Animal Vocalization Segmentation (AVS) is a GUI tool to provide manual intervention during vocalization segmentation. It is to be used in conjunction with [warbler.py](https://github.com/braycarlson/warbler.py). The segmentation algorithm was developed by Dr. Tim Sainburg ([vocalization segmentation](https://github.com/timsainb/vocalization-segmentation)). In addition to automatic segmentation, it is possible to exclude an incorrect vocalization from further processing by clicking on the segment.
 
