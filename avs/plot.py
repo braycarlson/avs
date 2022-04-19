@@ -14,7 +14,7 @@ from spectrogram.axes import SpectrogramAxes
 from spectrogram.plot import (
     plot_spectrogram
 )
-from validation import to_digit
+from validation import to_exclusion
 from vocalseg.dynamic_thresholding import dynamic_threshold_segmentation
 
 
@@ -214,7 +214,7 @@ def plot_exclusion(window, data):
     blue = mcolors.to_rgba('#0079d3', alpha=0.75)
     red = mcolors.to_rgba('#d1193e', alpha=0.75)
 
-    exclude = to_digit(data['exclude'])
+    exclude = to_exclusion(data['exclude'])
 
     for index, (onset, offset) in enumerate(zip(onsets, offsets), 0):
         if index in exclude:

@@ -11,13 +11,13 @@ FILE = []
 FILENAME = []
 
 # The current-working directory of the project
-CWD = Path.cwd().parent.parent
+CWD = Path.cwd().parent
 
 # The drive of the project
 ROOT = Path(CWD.anchor)
 
 # The root directory for the package
-PACKAGE = CWD.joinpath('exclude/exclude')
+PACKAGE = CWD.joinpath('avs/avs')
 
 # The file for the baseline parameters
 BASELINE = PACKAGE.joinpath('parameter.json')

@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import os
 import pandas as pd
 import PySimpleGUI as sg
+import string
 
 from action import (
     backward,
@@ -13,24 +14,73 @@ from action import (
 )
 from constant import (
     BASELINE,
+    CWD,
     FILE,
     FILENAME
 )
 from gui import layout
 from plot import draw, plot_bandwidth, plot_exclusion
-from validation import REMOVE, to_digit, validate
+from validation import REMOVE, to_digit, to_exclusion, validate
 
 
 def main():
+    icon = CWD.joinpath('asset/avs.ico')
+
     window = sg.Window(
         'avs',
         layout(),
+        icon=icon,
         size=(1600, 850),
         location=(100, 75),
         element_justification='center',
         keep_on_top=False,
+        return_keyboard_events=True,
         finalize=True
     )
+
+    # Generate spectrogram
+    if os.name == 'nt':
+        window.bind('<Control-g>', 'generate_shortcut')
+    else:
+        window.bind('<Command-g>', 'generate_shortcut')
+
+    # Previous recording
+    if os.name == 'nt':
+        window.bind('<Control-Left>', 'previous_shortcut')
+    else:
+        window.bind('<Command-Left>', 'previous_shortcut')
+
+    # Next recording
+    if os.name == 'nt':
+        window.bind('<Control-Right>', 'next_shortcut')
+    else:
+        window.bind('<Command-Right>', 'next_shortcut')
+
+    # Switch mode
+    if os.name == 'nt':
+        window.bind('<Control-m>', 'mode_shortcut')
+    else:
+        window.bind('<Command-m>', 'mode_shortcut')
+
+    # Copy filename
+    if os.name == 'nt':
+        window.bind('<Control-f>', 'copy_shortcut')
+    else:
+        window.bind('<Command-f>', 'copy_shortcut')
+
+    # Open the parameters file
+    if os.name == 'nt':
+        window.bind('<Control-p>', 'parameters_shortcut')
+    else:
+        window.bind('<Command-p>', 'parameters_shortcut')
+
+    # Save parameters
+    if os.name == 'nt':
+        window.bind('<Control-s>', 'save_shortcut')
+    else:
+        window.bind('<Command-s>', 'save_shortcut')
+
+    window.bind('<Key>', 'keypress')
 
     widget = None
 
@@ -39,6 +89,20 @@ def main():
 
         if event == sg.WIN_CLOSED or event == 'Cancel':
             break
+
+        if event == 'keypress':
+            element = window.find_element_with_focus()
+
+            if isinstance(element, sg.PySimpleGUI.Input):
+                punctuation = ['-', '.', ',', ' ']
+
+                for character in data[element.key]:
+                    if (character not in string.digits and
+                            character not in punctuation):
+                        numerical = to_digit(data[element.key])
+                        window[element.key].update(numerical)
+
+                        continue
 
         if event == 'file':
             data['exclude'] = ''
@@ -66,7 +130,15 @@ def main():
                 values=values
             )
 
-        if event == 'generate':
+        if event == 'mode_shortcut':
+            mode = window['mode']
+
+            if data['mode'] == 'Exclusion':
+                mode.update('Frequency')
+            else:
+                mode.update('Exclusion')
+
+        if event == 'generate' or event == 'generate_shortcut':
             item = data['file']
 
             if item == '':
@@ -134,7 +206,7 @@ def main():
                 file = json.load(handle)
                 load_input(window, file)
 
-        if event == 'parameters':
+        if event == 'parameters' or event == 'parameters_shortcut':
             item = data['file']
 
             if item == '':
@@ -150,7 +222,7 @@ def main():
 
             os.startfile(parameter)
 
-        if event == 'next':
+        if event == 'next' or event == 'next_shortcut':
             if len(FILENAME) == 0:
                 sg.Popup(
                     'Please open a file',
@@ -178,7 +250,7 @@ def main():
                 file = json.load(handle)
                 load_input(window, file)
 
-        if event == 'previous':
+        if event == 'previous' or event == 'previous_shortcut':
             if len(FILENAME) == 0:
                 sg.Popup(
                     'Please open a file',
@@ -222,7 +294,7 @@ def main():
 
             os.startfile(song)
 
-        if event == 'copy':
+        if event == 'copy' or event == 'copy_shortcut':
             item = data['file']
 
             if item == '':
@@ -236,7 +308,7 @@ def main():
             df = pd.DataFrame([item])
             df.to_clipboard(index=False, header=False)
 
-        if event == 'save':
+        if event == 'save' or event == 'save_shortcut':
             item = data['file']
 
             if item == '':
@@ -262,7 +334,7 @@ def main():
 
             data['spectral_range'] = spectral_range
 
-            exclude = to_digit(data['exclude'])
+            exclude = to_exclusion(data['exclude'])
 
             data = validate(data)
 

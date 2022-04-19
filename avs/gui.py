@@ -19,9 +19,9 @@ def filelist():
             size=(60, 1),
             key='file',
             pad=(10, 0),
-            background_color='white',
-            text_color='black',
-            button_arrow_color='black',
+            background_color='#ffffff',
+            text_color='#242424',
+            button_arrow_color='#242424',
             button_background_color='white',
             enable_events=True,
             readonly=True,
@@ -62,9 +62,9 @@ def mode():
             size=(15, 1),
             key='mode',
             pad=((4, 0), 0),
-            background_color='white',
-            text_color='black',
-            button_arrow_color='black',
+            background_color='#ffffff',
+            text_color='#242424',
+            button_arrow_color='#242424',
             button_background_color='white',
             enable_events=True,
             readonly=True,
@@ -81,19 +81,24 @@ def parameter(name, **kwargs):
             sg.T(
                 name,
                 size=(20, 0),
-                font='Arial 10 bold'
+                font='Arial 10 bold',
+                text_color='#242424'
             ),
 
             sg.I(
                 '',
                 key=name + '_' + 'low',
-                size=(22, 1)
+                size=(22, 1),
+                text_color='#242424',
+                background_color='#ffffff'
             ),
 
             sg.I(
                 '',
                 key=name + '_' + 'high',
-                size=(22, 1)
+                size=(22, 1),
+                text_color='#242424',
+                background_color='#ffffff'
             )
         ]
     else:
@@ -101,13 +106,16 @@ def parameter(name, **kwargs):
             sg.T(
                 name,
                 size=(20, 0),
-                font='Arial 10 bold'
+                font='Arial 10 bold',
+                text_color='#242424'
             ),
 
             sg.I(
                 '',
                 key=name,
                 size=(46, 1),
+                text_color='#242424',
+                background_color='#ffffff',
                 **kwargs
             )
         ]

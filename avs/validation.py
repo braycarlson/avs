@@ -61,6 +61,18 @@ BOOLEAN = (
 
 
 def to_digit(data):
+    punctuation = ['-', '.', ',', ' ']
+
+    numerical = [
+        character
+        for character in data
+        if character.isdigit() or character in punctuation
+    ]
+
+    return ''.join(numerical)
+
+
+def to_exclusion(data):
     exclude = []
 
     table = str.maketrans(
