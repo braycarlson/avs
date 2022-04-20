@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import os
 import pandas as pd
 import PySimpleGUI as sg
+import tkinter
 
 from action import (
     backward,
@@ -87,8 +88,14 @@ def main():
     # Detect keypress
     window.bind('<Key>', 'keypress')
 
+    # Up arrow
+    window.bind('<Up>', 'up')
+
     # Left arrow
     window.bind('<Left>', 'left')
+
+    # Down arrow
+    window.bind('<Down>', 'down')
 
     # Right arrow
     window.bind('<Right>', 'right')
@@ -106,6 +113,7 @@ def main():
 
             if isinstance(element, sg.PySimpleGUI.Input):
                 ui = to_digit(data[element.key])
+                cursor = element.widget.index(tkinter.INSERT)
 
                 if element.key in LOW:
                     window['spectral_range_low'].update(ui)
@@ -117,6 +125,22 @@ def main():
                     window['butter_highcut'].update(ui)
                 else:
                     window[element.key].update(ui)
+
+                element.widget.icursor(cursor)
+
+        if event == 'up':
+            element = window.find_element_with_focus()
+
+            if isinstance(element, sg.PySimpleGUI.Input):
+                element.widget.icursor(0)
+
+        if event == 'down':
+            element = window.find_element_with_focus()
+
+            if isinstance(element, sg.PySimpleGUI.Input):
+                ui = data[element.key]
+                length = len(ui)
+                element.widget.icursor(length)
 
         if event == 'file':
             data['exclude'] = ''

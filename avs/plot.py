@@ -15,6 +15,13 @@ from spectrogram.axes import SpectrogramAxes
 from spectrogram.plot import (
     plot_spectrogram
 )
+from theme import (
+    BUTTON_BACKGROUND,
+    COMBOBOX_BACKGROUND,
+    CTA_BACKGROUND,
+    INPUT_BACKGROUND,
+    TEXT_COLOR
+)
 from validation import to_exclusion
 from vocalseg.dynamic_thresholding import dynamic_threshold_segmentation
 
@@ -177,7 +184,7 @@ def plot_exclusion(window, data):
             'Please adjust the parameter(s)',
             title='Error',
             icon=ICON,
-            button_color='#242424',
+            button_color=BUTTON_BACKGROUND,
             keep_on_top=True
         )
 
@@ -187,7 +194,7 @@ def plot_exclusion(window, data):
             'Please adjust the parameter(s)',
             title='Error',
             icon=ICON,
-            button_color='#242424',
+            button_color=BUTTON_BACKGROUND,
             keep_on_top=True
         )
 

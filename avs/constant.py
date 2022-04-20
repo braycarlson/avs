@@ -20,7 +20,7 @@ ROOT = Path(CWD.anchor)
 ICON = CWD.joinpath('asset/avs.ico')
 
 # The root directory for the package
-PACKAGE = CWD.joinpath('avs/avs')
+PACKAGE = CWD.joinpath('avs')
 
 # The file for the baseline parameters
 BASELINE = PACKAGE.joinpath('parameter.json')

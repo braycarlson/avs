@@ -1,10 +1,19 @@
 import PySimpleGUI as sg
 
 from constant import PACKAGE
+from theme import (
+    BUTTON_BACKGROUND,
+    BUTTON_FONT,
+    COMBOBOX_BACKGROUND,
+    CTA_BACKGROUND,
+    FONT,
+    INPUT_BACKGROUND,
+    TEXT_COLOR
+)
 
 
 sg.theme('LightGrey1')
-sg.PySimpleGUI.TOOLTIP_BACKGROUND_COLOR = "#ffffff"
+sg.PySimpleGUI.TOOLTIP_BACKGROUND_COLOR = INPUT_BACKGROUND
 
 
 def filelist():
@@ -12,7 +21,7 @@ def filelist():
         sg.T(
             'File',
             size=(0, 0),
-            font='Arial 10 bold'
+            font=FONT
         ),
 
         sg.Combo(
@@ -20,10 +29,10 @@ def filelist():
             size=(60, 1),
             key='file',
             pad=(10, 0),
-            background_color='#ffffff',
-            text_color='#242424',
-            button_arrow_color='#242424',
-            button_background_color='#ffffff',
+            background_color=COMBOBOX_BACKGROUND,
+            text_color=TEXT_COLOR,
+            button_arrow_color=TEXT_COLOR,
+            button_background_color=COMBOBOX_BACKGROUND,
             enable_events=True,
             readonly=True,
         ),
@@ -40,7 +49,7 @@ def filelist():
 
         sg.FileBrowse(
             size=(10, 0),
-            button_color='#242424',
+            button_color=BUTTON_BACKGROUND,
             key='explorer',
             target='browse',
             initial_folder=PACKAGE,
@@ -55,7 +64,7 @@ def mode():
         sg.T(
             'Mode',
             size=(0, 0),
-            font='Arial 10 bold'
+            font=FONT
         ),
 
         sg.Combo(
@@ -63,10 +72,10 @@ def mode():
             size=(15, 1),
             key='mode',
             pad=((4, 0), 0),
-            background_color='#ffffff',
-            text_color='#242424',
-            button_arrow_color='#242424',
-            button_background_color='#ffffff',
+            background_color=COMBOBOX_BACKGROUND,
+            text_color=TEXT_COLOR,
+            button_arrow_color=TEXT_COLOR,
+            button_background_color=COMBOBOX_BACKGROUND,
             enable_events=True,
             readonly=True,
             default_value='Exclusion'
@@ -85,16 +94,16 @@ def parameter(name, **kwargs):
             sg.T(
                 name,
                 size=(20, 0),
-                font='Arial 10 bold',
-                text_color='#242424'
+                font=FONT,
+                text_color=TEXT_COLOR
             ),
 
             sg.I(
                 '',
                 key=name + '_' + 'low',
                 size=(22, 1),
-                text_color='#242424',
-                background_color='#ffffff',
+                text_color=TEXT_COLOR,
+                background_color=INPUT_BACKGROUND,
                 **kwargs
             ),
 
@@ -102,8 +111,8 @@ def parameter(name, **kwargs):
                 '',
                 key=name + '_' + 'high',
                 size=(22, 1),
-                text_color='#242424',
-                background_color='#ffffff',
+                text_color=TEXT_COLOR,
+                background_color=INPUT_BACKGROUND,
                 **kwargs
             )
         ]
@@ -112,30 +121,29 @@ def parameter(name, **kwargs):
             sg.T(
                 name,
                 size=(20, 0),
-                font='Arial 10 bold',
-                text_color='#242424'
+                font=FONT,
+                text_color=TEXT_COLOR
             ),
 
             sg.I(
                 '',
                 key=name,
                 size=(46, 1),
-                text_color='#242424',
-                background_color='#ffffff',
+                text_color=TEXT_COLOR,
+                background_color=INPUT_BACKGROUND,
                 **kwargs
             )
         ]
 
 
 def button(name, **kwargs):
-    font = 'Arial 10'
     size = (18, 1)
 
     return [
         sg.B(
             name,
             size=size,
-            font=font,
+            font=BUTTON_FONT,
             **kwargs
         )
     ]
@@ -278,18 +286,18 @@ def layout():
             )
         ],
         [sg.Frame('', border_width=0, pad=(None, (20, 0)), layout=[
-            button('Previous', key='previous', button_color='#242424') +
-            button('Generate', key='generate', button_color='#d22245') +
-            button('Next', key='next', button_color='#242424')
+            button('Previous', key='previous', button_color=BUTTON_BACKGROUND) +
+            button('Generate', key='generate', button_color=CTA_BACKGROUND) +
+            button('Next', key='next', button_color=BUTTON_BACKGROUND)
         ])],
         [sg.Frame('', border_width=0, pad=(None, (20, 0)), layout=[
-            button('Parameters', key='parameters', button_color='#242424') +
-            button('Reset to Custom', key='reset_custom', button_color='#242424') +
-            button('Reset to Baseline', key='reset_baseline', button_color='#242424')
+            button('Parameters', key='parameters', button_color=BUTTON_BACKGROUND) +
+            button('Reset to Custom', key='reset_custom', button_color=BUTTON_BACKGROUND) +
+            button('Reset to Baseline', key='reset_baseline', button_color=BUTTON_BACKGROUND)
         ])],
         [sg.Frame('', border_width=0, pad=(None, (20, 0)), layout=[
-            button('Play', key='play', button_color='#242424') +
-            button('Copy', key='copy', button_color='#242424') +
-            button('Save', key='save', button_color='#242424')
+            button('Play', key='play', button_color=BUTTON_BACKGROUND) +
+            button('Copy', key='copy', button_color=BUTTON_BACKGROUND) +
+            button('Save', key='save', button_color=BUTTON_BACKGROUND)
         ])]
     ]
