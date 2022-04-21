@@ -7,7 +7,7 @@ from constant import ICON
 from dataclass.signal import Signal
 from dataclass.spectrogram import Spectrogram
 from event import on_click
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Rectangle
 from parameters import Parameters
@@ -15,28 +15,9 @@ from spectrogram.axes import SpectrogramAxes
 from spectrogram.plot import (
     plot_spectrogram
 )
-from theme import (
-    BUTTON_BACKGROUND,
-    COMBOBOX_BACKGROUND,
-    CTA_BACKGROUND,
-    INPUT_BACKGROUND,
-    TEXT_COLOR
-)
+from theme import BUTTON_BACKGROUND
 from validation import to_exclusion
 from vocalseg.dynamic_thresholding import dynamic_threshold_segmentation
-
-
-def draw(canvas, figure):
-    figcan = FigureCanvasTkAgg(figure, canvas)
-    figcan.draw()
-
-    figcan.get_tk_widget().pack(
-        side='top',
-        fill='x',
-        expand=0
-    )
-
-    return figcan
 
 
 def plot_bandwidth(window, data):

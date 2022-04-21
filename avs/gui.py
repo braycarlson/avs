@@ -52,6 +52,9 @@ def filelist():
             button_color=BUTTON_BACKGROUND,
             key='explorer',
             target='browse',
+            file_types=(
+                ('Pickle', '*.pkl'),
+            ),
             initial_folder=PACKAGE,
             enable_events=True,
             change_submits=False

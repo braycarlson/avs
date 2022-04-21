@@ -18,8 +18,9 @@ from constant import (
     FILENAME,
     ICON
 )
+from dataclass.canvas import Canvas
 from gui import layout
-from plot import draw, plot_bandwidth, plot_exclusion
+from plot import plot_bandwidth, plot_exclusion
 from validation import (
     HIGH,
     LOW,
@@ -100,7 +101,11 @@ def main():
     # Right arrow
     window.bind('<Right>', 'right')
 
-    widget = None
+    # The canvas for a spectrogram
+    figsize = (16, 3)
+    fig = plt.figure(figsize=figsize)
+    tk_canvas = window['canvas'].tk_canvas
+    canvas = Canvas(fig, tk_canvas)
 
     while True:
         event, data = window.read()
@@ -145,10 +150,6 @@ def main():
         if event == 'file':
             data['exclude'] = ''
 
-            if widget is not None:
-                widget.get_tk_widget().forget()
-                plt.close('all')
-
             item = data['file']
             metadata = get_metadata(item)
             parameter = metadata.get('parameter')
@@ -190,6 +191,13 @@ def main():
 
                 continue
 
+            figure = plt.gcf()
+
+            if figure is not None:
+                plt.cla()
+                plt.clf()
+                plt.close('all')
+
             data = validate(data)
 
             if data is None:
@@ -198,18 +206,15 @@ def main():
             mode = data['mode']
 
             if mode == 'Exclusion':
-                fig = plot_exclusion(window, data)
+                figure = plot_exclusion(window, data)
             else:
-                fig = plot_bandwidth(window, data)
+                figure = plot_bandwidth(window, data)
 
-            if fig is None:
+            if figure is None:
                 continue
 
-            if widget is not None:
-                widget.get_tk_widget().forget()
-                plt.close('all')
-
-            widget = draw(window['canvas'].TKCanvas, fig)
+            canvas.set_figure(figure)
+            canvas.draw()
 
         if event == 'reset_custom':
             item = data['file']
