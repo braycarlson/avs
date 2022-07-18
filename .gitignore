@@ -1,9 +1,10 @@
-# exclude
+# avs
+pickle/
+
 *.ai
 *.bat
 *.pkl
 *.zip
-
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -53,7 +53,7 @@ def filelist():
             key='explorer',
             target='browse',
             file_types=(
-                ('Pickle', '*.pkl'),
+                ('lzma', '*.xz'),
             ),
             initial_folder=PACKAGE,
             enable_events=True,

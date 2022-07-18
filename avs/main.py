@@ -5,35 +5,23 @@ import pandas as pd
 import PySimpleGUI as sg
 import tkinter
 
-from action import (
-    backward,
-    forward,
-    get_metadata,
-    load_input,
-    load_pickle
-)
-from constant import (
-    BASELINE,
-    FILE,
-    FILENAME,
-    ICON
-)
-from dataclass.canvas import Canvas
+from constant import ICON, SETTINGS
+from datatype.canvas import Canvas
+from datatype.parameters import Parameters
 from gui import layout
-from plot import plot_bandwidth, plot_exclusion
+from keybind import register_keybind
+from state import load_input, State
 from validation import (
     HIGH,
+    Input,
     LOW,
-    REMOVE,
-    to_digit,
-    to_exclusion,
-    validate
+    to_digit
 )
 
 
 def main():
     window = sg.Window(
-        '',
+        'Animal Vocalization Segmentation',
         layout(),
         icon=ICON,
         size=(1600, 850),
@@ -44,68 +32,14 @@ def main():
         finalize=True
     )
 
-    # Generate spectrogram
-    if os.name == 'nt':
-        window.bind('<Control-g>', 'generate_shortcut')
-    else:
-        window.bind('<Command-g>', 'generate_shortcut')
+    register_keybind(window)
 
-    # Previous recording
-    if os.name == 'nt':
-        window.bind('<Control-Left>', 'previous_shortcut')
-    else:
-        window.bind('<Command-Left>', 'previous_shortcut')
-
-    # Next recording
-    if os.name == 'nt':
-        window.bind('<Control-Right>', 'next_shortcut')
-    else:
-        window.bind('<Command-Right>', 'next_shortcut')
-
-    # Switch mode
-    if os.name == 'nt':
-        window.bind('<Control-m>', 'mode_shortcut')
-    else:
-        window.bind('<Command-m>', 'mode_shortcut')
-
-    # Copy filename
-    if os.name == 'nt':
-        window.bind('<Control-f>', 'copy_shortcut')
-    else:
-        window.bind('<Command-f>', 'copy_shortcut')
-
-    # Open the parameters file
-    if os.name == 'nt':
-        window.bind('<Control-p>', 'parameters_shortcut')
-    else:
-        window.bind('<Command-p>', 'parameters_shortcut')
-
-    # Save parameters
-    if os.name == 'nt':
-        window.bind('<Control-s>', 'save_shortcut')
-    else:
-        window.bind('<Command-s>', 'save_shortcut')
-
-    # Detect keypress
-    window.bind('<Key>', 'keypress')
-
-    # Up arrow
-    window.bind('<Up>', 'up')
-
-    # Left arrow
-    window.bind('<Left>', 'left')
-
-    # Down arrow
-    window.bind('<Down>', 'down')
-
-    # Right arrow
-    window.bind('<Right>', 'right')
-
-    # The canvas for a spectrogram
     figsize = (16, 3)
     fig = plt.figure(figsize=figsize)
     tk_canvas = window['canvas'].tk_canvas
     canvas = Canvas(fig, tk_canvas)
+
+    state = State()
 
     while True:
         event, data = window.read()
@@ -150,24 +84,49 @@ def main():
         if event == 'file':
             data['exclude'] = ''
 
-            item = data['file']
-            metadata = get_metadata(item)
-            parameter = metadata.get('parameter')
+            file = data.get('file')
+            state.update(file)
 
-            with open(parameter, 'r') as handle:
+            path = state.current.parameters
+
+            with open(path, 'r') as handle:
                 file = json.load(handle)
                 load_input(window, file)
 
+            state.set(data)
+            state.autogenerate = True
+            spectrogram = canvas.prepare(window, state)
+
+            if spectrogram is None:
+                continue
+
+            canvas.set(spectrogram)
+            canvas.draw()
+
         if event == 'browse':
             item = data['browse']
-            load_pickle(item)
-
-            values = [item.get('filename') for item in FILE]
+            state.load(item)
 
             window['file'].update(
-                value='',
-                values=values
+                value=state.current.filename,
+                values=state.get_all()
             )
+
+            path = state.current.parameters
+
+            with open(path, 'r') as handle:
+                file = json.load(handle)
+                load_input(window, file)
+
+            state.set(data)
+            state.autogenerate = True
+            spectrogram = canvas.prepare(window, state)
+
+            if spectrogram is None:
+                continue
+
+            canvas.set(spectrogram)
+            canvas.draw()
 
         if event == 'mode_shortcut':
             mode = window['mode']
@@ -191,29 +150,14 @@ def main():
 
                 continue
 
-            figure = plt.gcf()
+            state.set(data)
+            state.autogenerate = False
+            spectrogram = canvas.prepare(window, state)
 
-            if figure is not None:
-                plt.cla()
-                plt.clf()
-                plt.close('all')
-
-            data = validate(data)
-
-            if data is None:
+            if spectrogram is None:
                 continue
 
-            mode = data['mode']
-
-            if mode == 'Exclusion':
-                figure = plot_exclusion(window, data)
-            else:
-                figure = plot_bandwidth(window, data)
-
-            if figure is None:
-                continue
-
-            canvas.set_figure(figure)
+            canvas.set(spectrogram)
             canvas.draw()
 
         if event == 'reset_custom':
@@ -231,10 +175,9 @@ def main():
                 continue
 
             data['exclude'] = ''
-            metadata = get_metadata(item)
-            parameter = metadata.get('parameter')
+            path = state.current.parameters
 
-            with open(parameter, 'r') as handle:
+            with open(path, 'r') as handle:
                 file = json.load(handle)
                 load_input(window, file)
 
@@ -254,7 +197,9 @@ def main():
 
             data['exclude'] = ''
 
-            with open(BASELINE, 'r') as handle:
+            path = SETTINGS.joinpath('parameters.json')
+
+            with open(path, 'r') as handle:
                 file = json.load(handle)
                 load_input(window, file)
 
@@ -272,13 +217,13 @@ def main():
 
                 continue
 
-            metadata = get_metadata(item)
-            parameter = metadata.get('parameter')
-
-            os.startfile(parameter)
+            path = state.current.parameters
+            os.startfile(path)
 
         if event == 'next' or event == 'next_shortcut':
-            if len(FILENAME) == 0:
+            item = data['file']
+
+            if item == '' or state.empty:
                 sg.Popup(
                     'Please open a file',
                     title='Error',
@@ -289,27 +234,33 @@ def main():
 
                 continue
 
-            item = data['file']
-
-            if item == '':
-                index = 0
-            else:
-                index = forward(item)
+            state.next()
 
             window['file'].update(
-                set_to_index=index,
+                set_to_index=state.index,
             )
 
-            item = FILENAME[index]
-            metadata = get_metadata(item)
-            parameter = metadata.get('parameter')
+            path = state.current.parameters
 
-            with open(parameter, 'r') as handle:
+            with open(path, 'r') as handle:
                 file = json.load(handle)
                 load_input(window, file)
+
+            canvas.close()
+
+            state.set(data)
+            spectrogram = canvas.prepare(window, state)
+
+            if spectrogram is None:
+                continue
+
+            canvas.set(spectrogram)
+            canvas.draw()
 
         if event == 'previous' or event == 'previous_shortcut':
-            if len(FILENAME) == 0:
+            item = data['file']
+
+            if item == '' or state.empty:
                 sg.Popup(
                     'Please open a file',
                     title='Error',
@@ -320,24 +271,26 @@ def main():
 
                 continue
 
-            item = data['file']
-
-            if item == '':
-                index = len(FILENAME) - 1
-            else:
-                index = backward(item)
+            state.previous()
 
             window['file'].update(
-                set_to_index=index,
+                set_to_index=state.index,
             )
 
-            item = FILENAME[index]
-            metadata = get_metadata(item)
-            parameter = metadata.get('parameter')
+            path = state.current.parameters
 
-            with open(parameter, 'r') as handle:
+            with open(path, 'r') as handle:
                 file = json.load(handle)
                 load_input(window, file)
+
+            state.set(data)
+            spectrogram = canvas.prepare(window, state)
+
+            if spectrogram is None:
+                continue
+
+            canvas.set(spectrogram)
+            canvas.draw()
 
         if event == 'play':
             item = data['file']
@@ -353,10 +306,8 @@ def main():
 
                 continue
 
-            metadata = get_metadata(item)
-            song = metadata.get('song')
-
-            os.startfile(song)
+            path = state.current.signal
+            os.startfile(path)
 
         if event == 'copy' or event == 'copy_shortcut':
             item = data['file']
@@ -389,45 +340,18 @@ def main():
 
                 continue
 
-            metadata = get_metadata(item)
-            parameter = metadata.get('parameter')
+            state.set(data)
+            ui = Input(state.input)
 
-            low = data.get('spectral_range_low')
-            high = data.pop('spectral_range_high')
-            spectral_range = [int(low), int(high)]
-
-            data = {
-                'spectral_range'
-                if key == 'spectral_range_low' else key: value
-                for key, value in data.items()
-            }
-
-            data['spectral_range'] = spectral_range
-
-            exclude = to_exclusion(data['exclude'])
-
-            data = validate(data)
-
-            if data is None:
+            if not ui.validate():
                 continue
 
-            data.update({
-                'exclude': exclude,
-                'power': 1.5,
-                'griffin_lim_iters': 50,
-                'noise_reduce_kwargs': {},
-                'mask_spec_kwargs': {
-                    'spec_thresh': 0.9,
-                    'offset': 1e-10
-                }
-            })
+            data = ui.transform()
 
-            for key in REMOVE:
-                data.pop(key)
-
-            with open(parameter, 'w+') as handle:
-                text = json.dumps(data, indent=4)
-                handle.write(text)
+            path = state.current.parameters
+            parameters = Parameters.from_file(path)
+            parameters.update(data)
+            parameters.save(path)
 
     window.close()
 

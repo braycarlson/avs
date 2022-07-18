@@ -1,3 +1,6 @@
+import io
+import librosa
+import noisereduce as nr
 import numpy as np
 
 from scipy.io import wavfile
@@ -50,6 +53,33 @@ class Signal:
             denominator,
             data
         )
+
+    def normalize(self):
+        self.data = librosa.util.normalize(
+            self.data
+        )
+
+    def reduce(self, **kwargs):
+        self.data = nr.reduce_noise(
+            y=self.data,
+            sr=self.rate,
+            **kwargs
+        )
+
+    def segment(self, onset, offset):
+        data = self.data[
+            int(onset * self.rate): int(offset * self.rate)
+        ]
+
+        buffer = io.BytesIO()
+
+        wavfile.write(
+            buffer,
+            self.rate,
+            data
+        )
+
+        return Signal(buffer)
 
     def save(self, path):
         wavfile.write(
