@@ -3,15 +3,15 @@ import matplotlib.pyplot as plt
 import PySimpleGUI as sg
 
 from abc import ABC, abstractmethod
-from constant import ICON
+from constant import ICON, WARBLER
+from copy import copy
 from datatype.axes import SpectrogramAxes
-from datatype.parameters import Parameters
+from datatype.settings import Settings
 from datatype.signal import Signal
 from datatype.spectrogram import Spectrogram
-from event import on_click
+from event import on_click, on_draw
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.patches import Rectangle
-# from spectrogram.plot import plot_spectrogram
 from theme import BUTTON_BACKGROUND
 from validation import Input
 from vocalseg.dynamic_thresholding import dynamic_threshold_segmentation
@@ -33,49 +33,76 @@ class Canvas(FigureCanvasTkAgg):
         return self.canvas.winfo_height() / 100
 
     def prepare(self, window, state):
-        path = state.current.parameters
-        parameters = Parameters.from_file(path)
+        path = WARBLER.joinpath(state.current.segmentation)
+        settings = Settings.from_file(path)
 
         if not state.autogenerate:
-            ui = Input(state.input)
+            ui = Input(state.ui)
 
             if ui.validate():
                 data = ui.transform()
-                parameters.update(data)
+                settings.update(data)
 
-        path = state.current.signal
-        signal = Signal(path)
+        if hasattr(state.current, 'dereverberate'):
+            signal = copy(state.current.dereverberate)
+        else:
+            path = state.current.signal
+            signal = Signal(path)
 
-        if parameters.bandpass_filter:
+        if settings.bandpass_filter:
             signal.filter(
-                parameters.butter_lowcut,
-                parameters.butter_highcut
+                settings.butter_lowcut,
+                settings.butter_highcut
             )
 
-        if parameters.reduce_noise:
+        if settings.reduce_noise:
             signal.reduce()
 
-        spectrogram = Spectrogram(signal, parameters)
+        spectrogram = Spectrogram(signal, settings)
 
-        mode = state.input.get('mode')
+        mode = state.ui.get('mode')
 
         if mode == 'Exclusion':
-            image = ExclusionSpectrogram(parameters, signal)
+            image = ExclusionSpectrogram(settings, signal)
             figure = image.create()
+
+            if figure is None:
+                return None
 
             patches = figure.gca().patches
 
-            figure.canvas.mpl_connect(
-                'button_press_event',
-                lambda event: on_click(
-                    event,
-                    window,
-                    patches
+            if patches:
+                length = len(patches) - 1
+
+                remove = [
+                    index
+                    for index in state.exclude
+                    if index > length
+                ]
+
+                state.exclude.difference_update(remove)
+
+                notes = ', '.join(
+                    [
+                        str(note)
+                        for note in sorted(state.exclude)
+                    ]
                 )
-            )
+
+                window['exclude'].update(notes)
+
+                figure.canvas.mpl_connect(
+                    'button_press_event',
+                    lambda event: on_click(
+                        event,
+                        window,
+                        state,
+                        patches
+                    )
+                )
         else:
             spectrogram._spectrogram_nn()
-            image = BandwidthSpectrogram(parameters, signal, spectrogram)
+            image = BandwidthSpectrogram(settings, signal, spectrogram)
             figure = image.create()
 
         return figure
@@ -130,8 +157,8 @@ class Plot(ABC):
 
 
 class ExclusionSpectrogram(Plot):
-    def __init__(self, parameters, signal):
-        self.parameters = parameters
+    def __init__(self, settings, signal):
+        self.settings = settings
         self.signal = signal
 
     def create(self):
@@ -139,25 +166,27 @@ class ExclusionSpectrogram(Plot):
             dts = dynamic_threshold_segmentation(
                 self.signal.data,
                 self.signal.rate,
-                n_fft=self.parameters.n_fft,
-                hop_length_ms=self.parameters.hop_length_ms,
-                win_length_ms=self.parameters.win_length_ms,
-                ref_level_db=self.parameters.ref_level_db,
-                pre=self.parameters.preemphasis,
-                min_level_db=self.parameters.min_level_db,
-                min_level_db_floor=self.parameters.min_level_db_floor,
-                db_delta=self.parameters.db_delta,
-                silence_threshold=self.parameters.silence_threshold,
-                # spectral_range=self.parameters.spectral_range,
-                min_silence_for_spec=self.parameters.min_silence_for_spec,
-                max_vocal_for_spec=self.parameters.max_vocal_for_spec,
-                min_syllable_length_s=self.parameters.min_syllable_length_s,
+                n_fft=self.settings.n_fft,
+                hop_length_ms=self.settings.hop_length_ms,
+                win_length_ms=self.settings.win_length_ms,
+                ref_level_db=self.settings.ref_level_db,
+                pre=self.settings.preemphasis,
+                min_level_db=self.settings.min_level_db,
+                min_level_db_floor=self.settings.min_level_db_floor,
+                db_delta=self.settings.db_delta,
+                silence_threshold=self.settings.silence_threshold,
+                # spectral_range=self.settings.spectral_range,
+                min_silence_for_spec=self.settings.min_silence_for_spec,
+                max_vocal_for_spec=self.settings.max_vocal_for_spec,
+                min_syllable_length_s=self.settings.min_syllable_length_s,
             )
 
             spectrogram = dts.get('spec')
             onsets = dts.get('onsets')
             offsets = dts.get('offsets')
-        except AttributeError:
+        except AttributeError as exception:
+            print(exception)
+
             sg.Popup(
                 'Please adjust the parameter(s)',
                 title='Error',
@@ -167,7 +196,9 @@ class ExclusionSpectrogram(Plot):
             )
 
             return None
-        except Exception:
+        except Exception as exception:
+            print(exception)
+
             sg.Popup(
                 'Please adjust the parameter(s)',
                 title='Error',
@@ -201,7 +232,7 @@ class ExclusionSpectrogram(Plot):
         red = mcolors.to_rgba('#d1193e', alpha=0.75)
 
         for index, (onset, offset) in enumerate(zip(onsets, offsets), 0):
-            if index in self.parameters.exclude:
+            if index in self.settings.exclude:
                 color = red
             else:
                 color = blue
@@ -253,8 +284,8 @@ class ExclusionSpectrogram(Plot):
 
 
 class BandwidthSpectrogram(Plot):
-    def __init__(self, parameters, signal, spectrogram):
-        self.parameters = parameters
+    def __init__(self, settings, signal, spectrogram):
+        self.settings = settings
         self.signal = signal
         self.spectrogram = spectrogram
 
@@ -279,7 +310,7 @@ class BandwidthSpectrogram(Plot):
         color = mcolors.to_rgba('#d1193e', alpha=0.75)
 
         ax.axhline(
-            self.parameters.butter_lowcut,
+            self.settings.butter_lowcut,
             color=color,
             ls='dashed',
             lw=1,
@@ -287,7 +318,7 @@ class BandwidthSpectrogram(Plot):
         )
 
         ax.axhline(
-            self.parameters.butter_highcut,
+            self.settings.butter_highcut,
             color=color,
             ls='dashed',
             lw=1,

@@ -1,6 +1,6 @@
 import PySimpleGUI as sg
 
-from constant import PACKAGE
+from constant import WARBLER
 from theme import (
     BUTTON_BACKGROUND,
     BUTTON_FONT,
@@ -17,6 +17,8 @@ sg.PySimpleGUI.TOOLTIP_BACKGROUND_COLOR = INPUT_BACKGROUND
 
 
 def filelist():
+    initial_folder = WARBLER.joinpath('output/pickle')
+
     return [
         sg.T(
             'File',
@@ -55,7 +57,7 @@ def filelist():
             file_types=(
                 ('lzma', '*.xz'),
             ),
-            initial_folder=PACKAGE,
+            initial_folder=initial_folder,
             enable_events=True,
             change_submits=False
         ),
@@ -145,6 +147,7 @@ def button(name, **kwargs):
     return [
         sg.B(
             name,
+            border_width=0,
             size=size,
             font=BUTTON_FONT,
             **kwargs
@@ -244,7 +247,9 @@ def layout():
         ),
         parameter(
             'exclude',
-            tooltip='A list of indices, which correspond to each segment of a recording'
+            tooltip='A list of indices, which correspond to each segment of a recording',
+            disabled=True,
+            use_readonly_for_disable=True
         )
     ]
 
@@ -294,7 +299,7 @@ def layout():
             button('Next', key='next', button_color=BUTTON_BACKGROUND)
         ])],
         [sg.Frame('', border_width=0, pad=(None, (20, 0)), layout=[
-            button('Parameters', key='parameters', button_color=BUTTON_BACKGROUND) +
+            button('Settings', key='settings', button_color=BUTTON_BACKGROUND) +
             button('Reset to Custom', key='reset_custom', button_color=BUTTON_BACKGROUND) +
             button('Reset to Baseline', key='reset_baseline', button_color=BUTTON_BACKGROUND)
         ])],

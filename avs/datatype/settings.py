@@ -3,7 +3,7 @@ import json
 from types import SimpleNamespace
 
 
-class Parameters(SimpleNamespace):
+class Settings(SimpleNamespace):
     def __init__(self, **data):
         super().__init__(**data)
 

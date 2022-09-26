@@ -34,10 +34,10 @@ def pad(spectrogram, padding):
 
 
 class Spectrogram:
-    def __init__(self, signal, parameters):
+    def __init__(self, signal, settings):
         self._data = None
         self._signal = signal
-        self._parameters = parameters
+        self._settings = settings
 
     @property
     def data(self):
@@ -52,7 +52,7 @@ class Spectrogram:
         self._normalize()
         # self.resize()
 
-        if self._parameters.mask_spec:
+        if self._settings.mask_spec:
             self.mask()
 
         self.normalize()
@@ -92,35 +92,35 @@ class Spectrogram:
 
         self.data = (
             self._amplitude_to_decibel(magnitude) -
-            self._parameters.ref_level_db
+            self._settings.ref_level_db
         )
 
     def _preemphasis(self):
         return lfilter(
-            [1, -self._parameters.preemphasis],
+            [1, -self._settings.preemphasis],
             [1],
             self._signal.data
         )
 
     def _stft(self, y):
         hop_length = int(
-            self._parameters.hop_length_ms / 1000 * self._signal.rate
+            self._settings.hop_length_ms / 1000 * self._signal.rate
         )
 
         win_length = int(
-            self._parameters.win_length_ms / 1000 * self._signal.rate
+            self._settings.win_length_ms / 1000 * self._signal.rate
         )
 
         return librosa.stft(
             y=y,
-            n_fft=self._parameters.n_fft,
+            n_fft=self._settings.n_fft,
             hop_length=hop_length,
             win_length=win_length,
         )
 
     def _normalize(self):
         self.data = np.clip(
-            (self.data - self._parameters.min_level_db) / -self._parameters.min_level_db,
+            (self.data - self._settings.min_level_db) / -self._settings.min_level_db,
             0,
             1
         )

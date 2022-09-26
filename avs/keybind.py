@@ -40,11 +40,11 @@ def register_keybind(window):
     # Generate spectrogram
     keybind.register('g', 'generate_shortcut')
 
-    # Previous recording
-    keybind.register('Left', 'previous_shortcut')
+    # # Previous recording
+    # keybind.register('Left', 'previous_shortcut')
 
-    # Next recording
-    keybind.register('Right', 'next_shortcut')
+    # # Next recording
+    # keybind.register('Right', 'next_shortcut')
 
     # Switch mode
     keybind.register('m', 'mode_shortcut')
@@ -52,10 +52,10 @@ def register_keybind(window):
     # Copy filename
     keybind.register('f', 'copy_shortcut')
 
-    # Open the parameters file
-    keybind.register('p', 'parameters_shortcut')
+    # Open the settings file
+    keybind.register('p', 'settings_shortcut')
 
-    # Save parameters
+    # Save settings
     keybind.register('s', 'save_shortcut')
 
     # Detect keypress

@@ -1,10 +1,11 @@
 -e avs
 
 librosa
+nara_wpe
 natsort
 noisereduce
-numba==0.53.*
-numpy==1.22.0
+numba
+numpy
 pandas
 PySide2
 pysimplegui

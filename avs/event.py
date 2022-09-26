@@ -1,10 +1,30 @@
 import matplotlib.colors as mcolors
 
-from constant import EXCLUDE
 from matplotlib.backend_bases import MouseButton
 
 
-def on_click(event, window, patches):
+def on_draw(event, window, state, patches):
+    length = len(patches) - 1
+
+    remove = [
+        index
+        for index in state.exclude
+        if index > length
+    ]
+
+    state.exclude.difference_update(remove)
+
+    notes = ', '.join(
+        [
+            str(note)
+            for note in sorted(state.exclude)
+        ]
+    )
+
+    window['exclude'].update(notes)
+
+
+def on_click(event, window, state, patches):
     if event.inaxes is None:
         return
 
@@ -27,10 +47,10 @@ def on_click(event, window, patches):
 
                 if facecolor == red:
                     color = blue
-                    EXCLUDE.remove(label)
+                    state.exclude.remove(label)
                 else:
                     color = red
-                    EXCLUDE.add(label)
+                    state.exclude.add(label)
 
                 patch.set_color(color)
                 event.inaxes.lines[index].set_color(color)
@@ -39,7 +59,7 @@ def on_click(event, window, patches):
                 notes = ', '.join(
                     [
                         str(note)
-                        for note in sorted(EXCLUDE)
+                        for note in sorted(state.exclude)
                     ]
                 )
 

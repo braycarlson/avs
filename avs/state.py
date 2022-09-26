@@ -1,7 +1,8 @@
+import json
 import lzma
 import pickle
 
-from constant import EXCLUDE
+from constant import WARBLER
 from types import SimpleNamespace
 from validation import IGNORE, REMOVE
 
@@ -17,12 +18,14 @@ class Node(SimpleNamespace):
 
 class State:
     def __init__(self):
-        self._index = 0
-        self._length = None
+        self.index = 0
+        self.length = 0
         self.autogenerate = True
         self.current = None
         self.data = None
-        self.input = None
+        self.exclude = set()
+        self.ui = None
+        self._warbler = None
 
     @property
     def empty(self):
@@ -34,20 +37,12 @@ class State:
         return False
 
     @property
-    def index(self):
-        return self._index
+    def warbler(self):
+        return self._warbler
 
-    @index.setter
-    def index(self, index):
-        self._index = index
-
-    @property
-    def length(self):
-        return self._length
-
-    @length.setter
-    def length(self, length):
-        self._length = length
+    @warbler.setter
+    def warbler(self, warbler):
+        self._warbler = warbler
 
     def get_all(self):
         return [
@@ -55,7 +50,7 @@ class State:
             for file in self.data
         ]
 
-    def load(self, path):
+    def open(self, path):
         with lzma.open(path, 'rb') as handle:
             self.data = pickle.load(handle)
             self.length = len(self.data)
@@ -86,7 +81,7 @@ class State:
         self.current = Node.load(file)
 
     def set(self, ui):
-        self.input = ui
+        self.ui = ui
 
     def update(self, filename):
         recordings = self.get_all()
@@ -95,27 +90,33 @@ class State:
         file = self.data[self.index]
         self.current = Node.load(file)
 
+    def load(self, window):
+        path = WARBLER.joinpath(
+            self.current.segmentation
+        )
 
-def load_input(window, parameters):
-    for key in parameters.keys():
-        if key in IGNORE or key in REMOVE:
-            continue
+        with open(path, 'r') as handle:
+            settings = json.load(handle)
 
-        if key == 'spectral_range':
-            low, high = parameters[key]
+        for key in settings.keys():
+            if key in IGNORE or key in REMOVE:
+                continue
 
-            window['spectral_range_low'].update(low)
-            window['spectral_range_high'].update(high)
+            if key == 'spectral_range':
+                low, high = settings[key]
+
+                window['spectral_range_low'].update(low)
+                window['spectral_range_high'].update(high)
+            else:
+                window[key].update(settings[key])
+
+        exclude = settings.get('exclude')
+
+        self.exclude.clear()
+        self.exclude.update(exclude)
+
+        if exclude:
+            notes = ', '.join([str(note) for note in exclude])
+            window['exclude'].update(notes)
         else:
-            window[key].update(parameters[key])
-
-    exclude = parameters.get('exclude')
-
-    EXCLUDE.clear()
-    EXCLUDE.update(exclude)
-
-    if exclude:
-        notes = ', '.join([str(note) for note in exclude])
-        window['exclude'].update(notes)
-    else:
-        window['exclude'].update('')
+            window['exclude'].update('')

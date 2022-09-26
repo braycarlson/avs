@@ -1,9 +1,6 @@
 from pathlib import Path
 
 
-# The notes (per song) to exclude from processing
-EXCLUDE = set()
-
 # The current-working directory of the project
 CWD = Path.cwd().parent
 
@@ -21,3 +18,6 @@ SETTINGS = PACKAGE.joinpath('settings')
 
 # The directory for pickled recordings
 PICKLE = PACKAGE.joinpath('pickle')
+
+# The directory for warbler.py
+WARBLER = Path('E:/code/personal/warbler.py/')

@@ -1,16 +1,15 @@
-import json
 import matplotlib.pyplot as plt
 import os
 import pandas as pd
 import PySimpleGUI as sg
 import tkinter
 
-from constant import ICON, SETTINGS
+from constant import ICON, WARBLER
 from datatype.canvas import Canvas
-from datatype.parameters import Parameters
+from datatype.settings import Settings
 from gui import layout
 from keybind import register_keybind
-from state import load_input, State
+from state import State
 from validation import (
     HIGH,
     Input,
@@ -19,7 +18,29 @@ from validation import (
 )
 
 
+def popup(message):
+    layout = [
+        [sg.Text(message)]
+    ]
+
+    window = sg.Window(
+        message,
+        layout,
+        no_titlebar=True,
+        size=(150, 150),
+        location=(800, 300),
+        element_justification='center',
+        keep_on_top=True,
+        finalize=True
+    )
+
+    return window
+
+
 def main():
+    if not WARBLER.is_dir():
+        raise FileNotFoundError(f"{WARBLER} does not exist")
+
     window = sg.Window(
         'Animal Vocalization Segmentation',
         layout(),
@@ -40,6 +61,7 @@ def main():
     canvas = Canvas(fig, tk_canvas)
 
     state = State()
+    state.warbler = WARBLER
 
     while True:
         event, data = window.read()
@@ -82,17 +104,10 @@ def main():
                 element.widget.icursor(length)
 
         if event == 'file':
-            data['exclude'] = ''
-
             file = data.get('file')
             state.update(file)
 
-            path = state.current.parameters
-
-            with open(path, 'r') as handle:
-                file = json.load(handle)
-                load_input(window, file)
-
+            state.load(window)
             state.set(data)
             state.autogenerate = True
             spectrogram = canvas.prepare(window, state)
@@ -104,19 +119,24 @@ def main():
             canvas.draw()
 
         if event == 'browse':
+            prompt = popup('Loading file...')
+            window.force_focus()
+
             item = data['browse']
-            state.load(item)
+            state.open(item)
 
             window['file'].update(
                 value=state.current.filename,
                 values=state.get_all()
             )
 
-            path = state.current.parameters
+            window.start_thread(
+                lambda: state.load(window),
+                'loading'
+            )
 
-            with open(path, 'r') as handle:
-                file = json.load(handle)
-                load_input(window, file)
+            if prompt:
+                prompt.close()
 
             state.set(data)
             state.autogenerate = True
@@ -174,12 +194,18 @@ def main():
 
                 continue
 
-            data['exclude'] = ''
-            path = state.current.parameters
+            canvas.close()
 
-            with open(path, 'r') as handle:
-                file = json.load(handle)
-                load_input(window, file)
+            state.load(window)
+            state.set(data)
+            state.autogenerate = True
+            spectrogram = canvas.prepare(window, state)
+
+            if spectrogram is None:
+                continue
+
+            canvas.set(spectrogram)
+            canvas.draw()
 
         if event == 'reset_baseline':
             item = data['file']
@@ -195,15 +221,15 @@ def main():
 
                 continue
 
-            data['exclude'] = ''
+            # data['exclude'] = ''
 
-            path = SETTINGS.joinpath('parameters.json')
+            # path = SETTINGS.joinpath('spectrogram.json')
 
-            with open(path, 'r') as handle:
-                file = json.load(handle)
-                load_input(window, file)
+            # with open(path, 'r') as handle:
+            #     file = json.load(handle)
+            #     load_input(window, file)
 
-        if event == 'parameters' or event == 'parameters_shortcut':
+        if event == 'settings' or event == 'settings_shortcut':
             item = data['file']
 
             if item == '':
@@ -217,7 +243,7 @@ def main():
 
                 continue
 
-            path = state.current.parameters
+            path = WARBLER.joinpath(state.current.segmentation)
             os.startfile(path)
 
         if event == 'next' or event == 'next_shortcut':
@@ -240,14 +266,9 @@ def main():
                 set_to_index=state.index,
             )
 
-            path = state.current.parameters
-
-            with open(path, 'r') as handle:
-                file = json.load(handle)
-                load_input(window, file)
-
             canvas.close()
 
+            state.load(window)
             state.set(data)
             spectrogram = canvas.prepare(window, state)
 
@@ -277,12 +298,7 @@ def main():
                 set_to_index=state.index,
             )
 
-            path = state.current.parameters
-
-            with open(path, 'r') as handle:
-                file = json.load(handle)
-                load_input(window, file)
-
+            state.load(window)
             state.set(data)
             spectrogram = canvas.prepare(window, state)
 
@@ -341,17 +357,17 @@ def main():
                 continue
 
             state.set(data)
-            ui = Input(state.input)
+            ui = Input(state.ui)
 
             if not ui.validate():
                 continue
 
             data = ui.transform()
 
-            path = state.current.parameters
-            parameters = Parameters.from_file(path)
-            parameters.update(data)
-            parameters.save(path)
+            path = WARBLER.joinpath(state.current.segmentation)
+            settings = Settings.from_file(path)
+            settings.update(data)
+            settings.save(path)
 
     window.close()
 
