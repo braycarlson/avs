@@ -1,2 +1,2 @@
-git+https://github.com/braycarlson/avgn_paper
-git+https://github.com/timsainb/vocalization-segmentation
+# git+https://github.com/braycarlson/avgn_paper
+# git+https://github.com/timsainb/vocalization-segmentation

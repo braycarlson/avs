@@ -223,11 +223,19 @@ def main():
 
             # data['exclude'] = ''
 
-            # path = SETTINGS.joinpath('spectrogram.json')
+            # relative = 'warbler.py/settings/spectrogram.json'
+            # path = WARBLER.joinpath(relative)
 
-            # with open(path, 'r') as handle:
-            #     file = json.load(handle)
-            #     load_input(window, file)
+            # state.load(window, path=path)
+            # state.set(data)
+            # state.autogenerate = True
+            # spectrogram = canvas.prepare(window, state)
+
+            # if spectrogram is None:
+            #     continue
+
+            # canvas.set(spectrogram)
+            # canvas.draw()
 
         if event == 'settings' or event == 'settings_shortcut':
             item = data['file']
@@ -322,7 +330,7 @@ def main():
 
                 continue
 
-            path = state.current.signal
+            path = WARBLER.joinpath(state.current.recording)
             os.startfile(path)
 
         if event == 'copy' or event == 'copy_shortcut':

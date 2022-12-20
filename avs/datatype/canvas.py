@@ -6,15 +6,15 @@ from abc import ABC, abstractmethod
 from constant import ICON, WARBLER
 from copy import copy
 from datatype.axes import SpectrogramAxes
+from datatype.segmentation import dynamic_threshold_segmentation
 from datatype.settings import Settings
 from datatype.signal import Signal
-from datatype.spectrogram import Spectrogram
+from datatype.spectrogram import Linear, Spectrogram
 from event import on_click, on_draw
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.patches import Rectangle
 from theme import BUTTON_BACKGROUND
 from validation import Input
-from vocalseg.dynamic_thresholding import dynamic_threshold_segmentation
 
 
 class Canvas(FigureCanvasTkAgg):
@@ -46,7 +46,7 @@ class Canvas(FigureCanvasTkAgg):
         if hasattr(state.current, 'dereverberate'):
             signal = copy(state.current.dereverberate)
         else:
-            path = state.current.signal
+            path = WARBLER.joinpath(state.current.recording)
             signal = Signal(path)
 
         if settings.bandpass_filter:
@@ -58,7 +58,11 @@ class Canvas(FigureCanvasTkAgg):
         if settings.reduce_noise:
             signal.reduce()
 
-        spectrogram = Spectrogram(signal, settings)
+        spectrogram = Spectrogram()
+        strategy = Linear(signal, settings)
+        spectrogram.strategy = strategy
+
+        spectrogram = spectrogram.generate()
 
         mode = state.ui.get('mode')
 
@@ -101,7 +105,11 @@ class Canvas(FigureCanvasTkAgg):
                     )
                 )
         else:
-            spectrogram._spectrogram_nn()
+            spectrogram = Spectrogram()
+            strategy = Linear(signal, settings)
+            spectrogram.strategy = strategy
+
+            spectrogram = spectrogram.generate(normalize=False)
             image = BandwidthSpectrogram(settings, signal, spectrogram)
             figure = image.create()
 
@@ -164,26 +172,13 @@ class ExclusionSpectrogram(Plot):
     def create(self):
         try:
             dts = dynamic_threshold_segmentation(
-                self.signal.data,
-                self.signal.rate,
-                n_fft=self.settings.n_fft,
-                hop_length_ms=self.settings.hop_length_ms,
-                win_length_ms=self.settings.win_length_ms,
-                ref_level_db=self.settings.ref_level_db,
-                pre=self.settings.preemphasis,
-                min_level_db=self.settings.min_level_db,
-                min_level_db_floor=self.settings.min_level_db_floor,
-                db_delta=self.settings.db_delta,
-                silence_threshold=self.settings.silence_threshold,
-                # spectral_range=self.settings.spectral_range,
-                min_silence_for_spec=self.settings.min_silence_for_spec,
-                max_vocal_for_spec=self.settings.max_vocal_for_spec,
-                min_syllable_length_s=self.settings.min_syllable_length_s,
+                self.signal,
+                self.settings
             )
 
-            spectrogram = dts.get('spec')
-            onsets = dts.get('onsets')
-            offsets = dts.get('offsets')
+            spectrogram = dts.get('spectrogram')
+            onsets = dts.get('onset')
+            offsets = dts.get('offset')
         except AttributeError as exception:
             print(exception)
 

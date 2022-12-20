@@ -4,7 +4,6 @@ librosa
 nara_wpe
 natsort
 noisereduce
-numba
 numpy
 pandas
 PySide2

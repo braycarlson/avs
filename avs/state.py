@@ -1,19 +1,9 @@
 import json
-import lzma
-import pickle
 
 from constant import WARBLER
-from types import SimpleNamespace
+from datatype.dataset import Dataset
+from pathlib import Path
 from validation import IGNORE, REMOVE
-
-
-class Node(SimpleNamespace):
-    def __init__(self, **data):
-        super().__init__(**data)
-
-    @classmethod
-    def load(cls, data):
-        return cls(**data)
 
 
 class State:
@@ -22,7 +12,7 @@ class State:
         self.length = 0
         self.autogenerate = True
         self.current = None
-        self.data = None
+        self.dataframe = None
         self.exclude = set()
         self.ui = None
         self._warbler = None
@@ -31,7 +21,7 @@ class State:
     def empty(self):
         data = self.get_all()
 
-        if self.data is None or len(data) == 0:
+        if data is None or len(data) == 0:
             return True
 
         return False
@@ -45,18 +35,14 @@ class State:
         self._warbler = warbler
 
     def get_all(self):
-        return [
-            file.get('filename')
-            for file in self.data
-        ]
+        return self.dataframe.filename.to_list()
 
     def open(self, path):
-        with lzma.open(path, 'rb') as handle:
-            self.data = pickle.load(handle)
-            self.length = len(self.data)
+        filename = Path(path).stem
 
-            file = self.data[self.index]
-            self.current = Node.load(file)
+        dataset = Dataset(filename)
+        self.dataframe = dataset.load()
+        self.current = self.dataframe.iloc[self.index]
 
     def next(self):
         if self.index == self.length - 1:
@@ -65,9 +51,7 @@ class State:
             self.index = self.index + 1
 
         self.autogenerate = True
-
-        file = self.data[self.index]
-        self.current = Node.load(file)
+        self.current = self.dataframe.iloc[self.index]
 
     def previous(self):
         if self.index == 0:
@@ -76,19 +60,16 @@ class State:
             self.index = self.index - 1
 
         self.autogenerate = True
-
-        file = self.data[self.index]
-        self.current = Node.load(file)
+        self.current = self.dataframe.iloc[self.index]
 
     def set(self, ui):
         self.ui = ui
 
     def update(self, filename):
-        recordings = self.get_all()
-        self.index = recordings.index(filename)
+        data = self.get_all()
 
-        file = self.data[self.index]
-        self.current = Node.load(file)
+        self.index = data.index(filename)
+        self.current = self.dataframe.iloc[self.index]
 
     def load(self, window):
         path = WARBLER.joinpath(

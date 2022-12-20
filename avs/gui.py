@@ -55,7 +55,10 @@ def filelist():
             key='explorer',
             target='browse',
             file_types=(
-                ('lzma', '*.xz'),
+                (
+                    ['pickle'],
+                    ['*.pkl', '*.pickle, *.xz']
+                ),
             ),
             initial_folder=initial_folder,
             enable_events=True,
