@@ -45,8 +45,8 @@ def main():
         'Animal Vocalization Segmentation',
         layout(),
         icon=ICON,
-        size=(1600, 850),
-        location=(100, 75),
+        size=(1600, 900),
+        location=(100, 50),
         element_justification='center',
         keep_on_top=False,
         return_keyboard_events=True,
@@ -103,21 +103,6 @@ def main():
                 length = len(ui)
                 element.widget.icursor(length)
 
-        if event == 'file':
-            file = data.get('file')
-            state.update(file)
-
-            state.load(window)
-            state.set(data)
-            state.autogenerate = True
-            spectrogram = canvas.prepare(window, state)
-
-            if spectrogram is None:
-                continue
-
-            canvas.set(spectrogram)
-            canvas.draw()
-
         if event == 'browse':
             prompt = popup('Loading file...')
             window.force_focus()
@@ -138,8 +123,51 @@ def main():
             if prompt:
                 prompt.close()
 
-            state.set(data)
             state.autogenerate = True
+            state.baseline = False
+            state.set(data)
+
+            spectrogram = canvas.prepare(window, state)
+
+            if spectrogram is None:
+                continue
+
+            canvas.set(spectrogram)
+            canvas.draw()
+
+        if event == 'file':
+            file = data.get('file')
+            state.update(file)
+
+            state.autogenerate = True
+            state.baseline = False
+            state.load(window)
+            state.set(data)
+
+            spectrogram = canvas.prepare(window, state)
+
+            if spectrogram is None:
+                continue
+
+            canvas.set(spectrogram)
+            canvas.draw()
+
+        if state.current is None:
+            sg.Popup(
+                'Please select a file',
+                title='Error',
+                icon=ICON,
+                button_color='#242424',
+                keep_on_top=True
+            )
+
+            continue
+
+        if event == 'mode':
+            state.autogenerate = True
+            state.baseline = False
+            state.set(data)
+
             spectrogram = canvas.prepare(window, state)
 
             if spectrogram is None:
@@ -157,21 +185,10 @@ def main():
                 mode.update('Exclusion')
 
         if event == 'generate' or event == 'generate_shortcut':
-            item = data['file']
-
-            if item == '':
-                sg.Popup(
-                    'Please select a file',
-                    title='Error',
-                    icon=ICON,
-                    button_color='#242424',
-                    keep_on_top=True
-                )
-
-                continue
-
-            state.set(data)
             state.autogenerate = False
+            state.baseline = False
+            state.set(data)
+
             spectrogram = canvas.prepare(window, state)
 
             if spectrogram is None:
@@ -181,24 +198,11 @@ def main():
             canvas.draw()
 
         if event == 'reset_custom':
-            item = data['file']
-
-            if item == '':
-                sg.Popup(
-                    'Please select a file',
-                    title='Error',
-                    icon=ICON,
-                    button_color='#242424',
-                    keep_on_top=True
-                )
-
-                continue
-
-            canvas.close()
-
+            state.autogenerate = True
+            state.baseline = False
             state.load(window)
             state.set(data)
-            state.autogenerate = True
+
             spectrogram = canvas.prepare(window, state)
 
             if spectrogram is None:
@@ -208,76 +212,37 @@ def main():
             canvas.draw()
 
         if event == 'reset_baseline':
-            item = data['file']
+            data['exclude'] = ''
 
-            if item == '':
-                sg.Popup(
-                    'Please select a file',
-                    title='Error',
-                    icon=ICON,
-                    button_color='#242424',
-                    keep_on_top=True
-                )
+            state.autogenerate = True
+            state.baseline = True
+            state.load(window)
+            state.set(data)
 
+            spectrogram = canvas.prepare(window, state)
+
+            if spectrogram is None:
                 continue
 
-            # data['exclude'] = ''
-
-            # relative = 'warbler.py/settings/spectrogram.json'
-            # path = WARBLER.joinpath(relative)
-
-            # state.load(window, path=path)
-            # state.set(data)
-            # state.autogenerate = True
-            # spectrogram = canvas.prepare(window, state)
-
-            # if spectrogram is None:
-            #     continue
-
-            # canvas.set(spectrogram)
-            # canvas.draw()
+            canvas.set(spectrogram)
+            canvas.draw()
 
         if event == 'settings' or event == 'settings_shortcut':
-            item = data['file']
-
-            if item == '':
-                sg.Popup(
-                    'Please select a file',
-                    title='Error',
-                    icon=ICON,
-                    button_color='#242424',
-                    keep_on_top=True
-                )
-
-                continue
-
             path = WARBLER.joinpath(state.current.segmentation)
             os.startfile(path)
 
         if event == 'next' or event == 'next_shortcut':
-            item = data['file']
-
-            if item == '' or state.empty:
-                sg.Popup(
-                    'Please open a file',
-                    title='Error',
-                    icon=ICON,
-                    button_color='#242424',
-                    keep_on_top=True
-                )
-
-                continue
-
             state.next()
 
             window['file'].update(
                 set_to_index=state.index,
             )
 
-            canvas.close()
-
+            state.autogenerate = True
+            state.baseline = False
             state.load(window)
             state.set(data)
+
             spectrogram = canvas.prepare(window, state)
 
             if spectrogram is None:
@@ -287,27 +252,17 @@ def main():
             canvas.draw()
 
         if event == 'previous' or event == 'previous_shortcut':
-            item = data['file']
-
-            if item == '' or state.empty:
-                sg.Popup(
-                    'Please open a file',
-                    title='Error',
-                    icon=ICON,
-                    button_color='#242424',
-                    keep_on_top=True
-                )
-
-                continue
-
             state.previous()
 
             window['file'].update(
                 set_to_index=state.index,
             )
 
+            state.autogenerate = True
+            state.baseline = False
             state.load(window)
             state.set(data)
+
             spectrogram = canvas.prepare(window, state)
 
             if spectrogram is None:
@@ -317,53 +272,14 @@ def main():
             canvas.draw()
 
         if event == 'play':
-            item = data['file']
-
-            if item == '':
-                sg.Popup(
-                    'Please select a file',
-                    title='Error',
-                    icon=ICON,
-                    button_color='#242424',
-                    keep_on_top=True
-                )
-
-                continue
-
             path = WARBLER.joinpath(state.current.recording)
             os.startfile(path)
 
         if event == 'copy' or event == 'copy_shortcut':
-            item = data['file']
-
-            if item == '':
-                sg.Popup(
-                    'Please select a file',
-                    title='Error',
-                    icon=ICON,
-                    button_color='#242424',
-                    keep_on_top=True
-                )
-
-                continue
-
-            df = pd.DataFrame([item])
+            df = pd.DataFrame([state.current.filename])
             df.to_clipboard(index=False, header=False)
 
         if event == 'save' or event == 'save_shortcut':
-            item = data['file']
-
-            if item == '':
-                sg.Popup(
-                    'Please select a file',
-                    title='Error',
-                    icon=ICON,
-                    button_color='#242424',
-                    keep_on_top=True
-                )
-
-                continue
-
             state.set(data)
             ui = Input(state.ui)
 
@@ -373,6 +289,7 @@ def main():
             data = ui.transform()
 
             path = WARBLER.joinpath(state.current.segmentation)
+
             settings = Settings.from_file(path)
             settings.update(data)
             settings.save(path)

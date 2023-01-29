@@ -3,14 +3,14 @@ import matplotlib.pyplot as plt
 import PySimpleGUI as sg
 
 from abc import ABC, abstractmethod
-from constant import ICON, WARBLER
-from copy import copy
+from constant import ICON, SETTINGS, WARBLER
 from datatype.axes import SpectrogramAxes
 from datatype.segmentation import dynamic_threshold_segmentation
 from datatype.settings import Settings
 from datatype.signal import Signal
 from datatype.spectrogram import Linear, Spectrogram
 from event import on_click, on_draw
+from functools import partial
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.patches import Rectangle
 from theme import BUTTON_BACKGROUND
@@ -33,7 +33,11 @@ class Canvas(FigureCanvasTkAgg):
         return self.canvas.winfo_height() / 100
 
     def prepare(self, window, state):
-        path = WARBLER.joinpath(state.current.segmentation)
+        if state.baseline:
+            path = SETTINGS.joinpath('spectrogram.json')
+        else:
+            path = WARBLER.joinpath(state.current.segmentation)
+
         settings = Settings.from_file(path)
 
         if not state.autogenerate:
@@ -43,20 +47,52 @@ class Canvas(FigureCanvasTkAgg):
                 data = ui.transform()
                 settings.update(data)
 
-        if hasattr(state.current, 'dereverberate'):
-            signal = copy(state.current.dereverberate)
+        if hasattr(state.current, 'signal'):
+            signal = state.current.signal
         else:
             path = WARBLER.joinpath(state.current.recording)
             signal = Signal(path)
 
-        if settings.bandpass_filter:
-            signal.filter(
-                settings.butter_lowcut,
-                settings.butter_highcut
+            path = SETTINGS.joinpath('dereverberate.json')
+            dereverberate = Settings.from_file(path)
+
+            callback = {}
+
+            if settings.bandpass_filter:
+                callback['filter'] = partial(
+                    signal.filter,
+                    settings.butter_lowcut,
+                    settings.butter_highcut
+                )
+
+            if settings.normalize:
+                callback['normalize'] = partial(signal.normalize)
+
+            if settings.dereverberate:
+                callback['dereverberate'] = partial(
+                    signal.dereverberate,
+                    dereverberate
+                )
+
+            if settings.reduce_noise:
+                callback['reduce'] = partial(signal.reduce)
+
+            # The order should match the warbler.py pipeline
+            path = SETTINGS.joinpath('order.json')
+            order = Settings.from_file(path)
+
+            functions = list(
+                dict(
+                    sorted(
+                        order.__dict__.items(),
+                        key=lambda x: x[1]
+                    )
+                ).keys()
             )
 
-        if settings.reduce_noise:
-            signal.reduce()
+            for function in functions:
+                if function in callback:
+                    callback[function]()
 
         spectrogram = Spectrogram()
         strategy = Linear(signal, settings)

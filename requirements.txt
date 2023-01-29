@@ -10,3 +10,4 @@ PySide2
 pysimplegui
 scipy
 seaborn
+tensorflow

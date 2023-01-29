@@ -1,6 +1,6 @@
 import json
 
-from constant import WARBLER
+from constant import SETTINGS, WARBLER
 from datatype.dataset import Dataset
 from pathlib import Path
 from validation import IGNORE, REMOVE
@@ -11,6 +11,7 @@ class State:
         self.index = 0
         self.length = 0
         self.autogenerate = True
+        self.baseline = False
         self.current = None
         self.dataframe = None
         self.exclude = set()
@@ -43,6 +44,7 @@ class State:
         dataset = Dataset(filename)
         self.dataframe = dataset.load()
         self.current = self.dataframe.iloc[self.index]
+        self.length = len(self.dataframe)
 
     def next(self):
         if self.index == self.length - 1:
@@ -72,9 +74,10 @@ class State:
         self.current = self.dataframe.iloc[self.index]
 
     def load(self, window):
-        path = WARBLER.joinpath(
-            self.current.segmentation
-        )
+        if self.baseline:
+            path = SETTINGS.joinpath('spectrogram.json')
+        else:
+            path = WARBLER.joinpath(self.current.segmentation)
 
         with open(path, 'r') as handle:
             settings = json.load(handle)

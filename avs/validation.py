@@ -60,6 +60,8 @@ FLOAT = (
 BOOLEAN = (
     'bandpass_filter',
     'reduce_noise',
+    'normalize',
+    'dereverberate',
     'mask_spec'
 )
 

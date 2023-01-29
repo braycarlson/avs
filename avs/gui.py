@@ -12,7 +12,7 @@ from theme import (
 )
 
 
-sg.theme('LightGrey1')
+sg.theme('Reddit')
 sg.PySimpleGUI.TOOLTIP_BACKGROUND_COLOR = INPUT_BACKGROUND
 
 
@@ -62,7 +62,6 @@ def filelist():
             ),
             initial_folder=initial_folder,
             enable_events=True,
-            change_submits=False
         ),
     ]
 
@@ -204,13 +203,14 @@ def layout():
             'max_vocal_for_spec',
             tooltip='The longest expected vocalization in seconds'
         ),
-    ]
-
-    right = [
         parameter(
             'min_syllable_length_s',
             tooltip='The shortest expected length of a syllable'
         ),
+    ]
+
+    right = [
+
         parameter(
             'spectral_range',
             multi=True,
@@ -242,6 +242,14 @@ def layout():
         ),
         parameter(
             'reduce_noise',
+            # tooltip=''
+        ),
+        parameter(
+            'normalize',
+            # tooltip=''
+        ),
+        parameter(
+            'dereverberate',
             # tooltip=''
         ),
         parameter(

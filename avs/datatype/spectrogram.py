@@ -1,8 +1,18 @@
 import librosa
 import numpy as np
+import tensorflow as tf
 
 from abc import ABC, abstractmethod
+from librosa import mel_frequencies
 from scipy.signal import lfilter
+
+
+def compress(spectrogram):
+    minimum = np.min(spectrogram)
+    maximum = np.max(spectrogram)
+
+    spectrogram = (spectrogram - minimum) / (maximum - minimum)
+    return (spectrogram * 255).astype('uint8')
 
 
 def flatten(spectrogram):
@@ -15,6 +25,46 @@ def flatten(spectrogram):
             )
         )
     )
+
+
+def mel_matrix(settings, rate):
+    # Create a filter to convolve with the spectrogram
+    mel_matrix = tf.signal.linear_to_mel_weight_matrix(
+        num_mel_bins=settings.num_mel_bins,
+        num_spectrogram_bins=int(settings.n_fft / 2) + 1,
+        sample_rate=rate,
+        lower_edge_hertz=settings.mel_lower_edge_hertz,
+        upper_edge_hertz=settings.mel_upper_edge_hertz,
+        dtype=tf.dtypes.float32,
+        name=None
+    )
+
+    # Get the center frequencies of mel bands
+    mel_f = mel_frequencies(
+        n_mels=settings.num_mel_bins + 2,
+        fmin=settings.mel_lower_edge_hertz,
+        fmax=settings.mel_upper_edge_hertz
+    )
+
+    # Slaney-style mel is scaled to be approx constant energy per channel
+    enorm = tf.dtypes.cast(
+        tf.expand_dims(
+            tf.constant(
+                2.0 / (mel_f[2 : settings.num_mel_bins + 2] - mel_f[: settings.num_mel_bins])
+            ),
+            0,
+        ),
+        tf.float32
+    )
+
+    mel_matrix = tf.multiply(mel_matrix, enorm)
+
+    mel_matrix = tf.divide(
+        mel_matrix,
+        tf.reduce_sum(mel_matrix, axis=0)
+    )
+
+    return mel_matrix.numpy()
 
 
 def pad(spectrogram, padding):
@@ -36,8 +86,9 @@ def pad(spectrogram, padding):
 
 
 class Strategy(ABC):
-    def __init__(self, signal, settings):
+    def __init__(self, signal, settings, matrix=None):
         self._data = None
+        self.matrix = matrix
         self.signal = signal
         self.settings = settings
 
@@ -58,13 +109,6 @@ class Strategy(ABC):
             0,
             1
         )
-
-    def reduce(self):
-        minimum = np.min(self.data)
-        maximum = np.max(self.data)
-
-        data = (self.data - minimum) / (maximum - minimum)
-        self.data = (data * 255).astype('uint8')
 
     def preemphasis(self):
         self.data = lfilter(
@@ -112,8 +156,9 @@ class Strategy(ABC):
 
 
 class Linear(Strategy):
-    def __init__(self, signal, settings):
+    def __init__(self, signal, settings, matrix=None):
         self.data = None
+        self.matrix = matrix
         self.signal = signal
         self.settings = settings
 
@@ -131,14 +176,20 @@ class Linear(Strategy):
 
         if normalize is True:
             self.normalize()
-            self.reduce()
+
+        if self.matrix is not None:
+            self.data = np.dot(
+                self.data.T,
+                self.matrix
+            ).T
 
         return self.data
 
 
 class Mel(Strategy):
-    def __init__(self, signal, settings):
+    def __init__(self, signal, settings, matrix=None):
         self.data = None
+        self.matrix = matrix
         self.signal = signal
         self.settings = settings
 
@@ -173,14 +224,20 @@ class Mel(Strategy):
 
         if normalize is True:
             self.normalize()
-            self.reduce()
+
+        if self.matrix is not None:
+            self.data = np.dot(
+                self.data.T,
+                self.matrix
+            ).T
 
         return self.data
 
 
 class Segment(Strategy):
-    def __init__(self, signal, settings):
+    def __init__(self, signal, settings, matrix=None):
         self.data = None
+        self.matrix = matrix
         self.signal = signal
         self.settings = settings
 
@@ -198,7 +255,12 @@ class Segment(Strategy):
 
         if normalize is True:
             self.normalize()
-            self.reduce()
+
+        if self.matrix is not None:
+            self.data = np.dot(
+                self.data.T,
+                self.matrix
+            ).T
 
         return self.data
 
