@@ -7,7 +7,7 @@ import tkinter
 from constant import ICON, WARBLER
 from datatype.canvas import Canvas
 from datatype.settings import Settings
-from gui import layout
+from gui import layout, popup
 from keybind import register_keybind
 from state import State
 from validation import (
@@ -16,25 +16,6 @@ from validation import (
     LOW,
     to_digit
 )
-
-
-def popup(message):
-    layout = [
-        [sg.Text(message)]
-    ]
-
-    window = sg.Window(
-        message,
-        layout,
-        no_titlebar=True,
-        size=(150, 150),
-        location=(800, 300),
-        element_justification='center',
-        keep_on_top=True,
-        finalize=True
-    )
-
-    return window
 
 
 def main():
@@ -123,34 +104,9 @@ def main():
             if prompt:
                 prompt.close()
 
-            state.autogenerate = True
-            state.baseline = False
-            state.set(data)
-
-            spectrogram = canvas.prepare(window, state)
-
-            if spectrogram is None:
-                continue
-
-            canvas.set(spectrogram)
-            canvas.draw()
-
         if event == 'file':
             file = data.get('file')
             state.update(file)
-
-            state.autogenerate = True
-            state.baseline = False
-            state.load(window)
-            state.set(data)
-
-            spectrogram = canvas.prepare(window, state)
-
-            if spectrogram is None:
-                continue
-
-            canvas.set(spectrogram)
-            canvas.draw()
 
         if state.current is None:
             sg.Popup(
@@ -163,19 +119,6 @@ def main():
 
             continue
 
-        if event == 'mode':
-            state.autogenerate = True
-            state.baseline = False
-            state.set(data)
-
-            spectrogram = canvas.prepare(window, state)
-
-            if spectrogram is None:
-                continue
-
-            canvas.set(spectrogram)
-            canvas.draw()
-
         if event == 'mode_shortcut':
             mode = window['mode']
 
@@ -184,48 +127,8 @@ def main():
             else:
                 mode.update('Exclusion')
 
-        if event == 'generate' or event == 'generate_shortcut':
-            state.autogenerate = False
-            state.baseline = False
-            state.set(data)
-
-            spectrogram = canvas.prepare(window, state)
-
-            if spectrogram is None:
-                continue
-
-            canvas.set(spectrogram)
-            canvas.draw()
-
-        if event == 'reset_custom':
-            state.autogenerate = True
-            state.baseline = False
-            state.load(window)
-            state.set(data)
-
-            spectrogram = canvas.prepare(window, state)
-
-            if spectrogram is None:
-                continue
-
-            canvas.set(spectrogram)
-            canvas.draw()
-
         if event == 'reset_baseline':
             data['exclude'] = ''
-
-            state.autogenerate = True
-            state.baseline = True
-            state.load(window)
-            state.set(data)
-
-            spectrogram = canvas.prepare(window, state)
-
-            if spectrogram is None:
-                continue
-
-            canvas.set(spectrogram)
-            canvas.draw()
 
         if event == 'settings' or event == 'settings_shortcut':
             path = WARBLER.joinpath(state.current.segmentation)
@@ -238,19 +141,6 @@ def main():
                 set_to_index=state.index,
             )
 
-            state.autogenerate = True
-            state.baseline = False
-            state.load(window)
-            state.set(data)
-
-            spectrogram = canvas.prepare(window, state)
-
-            if spectrogram is None:
-                continue
-
-            canvas.set(spectrogram)
-            canvas.draw()
-
         if event == 'previous' or event == 'previous_shortcut':
             state.previous()
 
@@ -258,9 +148,40 @@ def main():
                 set_to_index=state.index,
             )
 
-            state.autogenerate = True
-            state.baseline = False
-            state.load(window)
+        if event in [
+            'browse',
+            'file',
+            'generate',
+            'generate_shortcut',
+            'mode',
+            'next',
+            'next_shortcut',
+            'previous',
+            'previous_shortcut',
+            'reset_baseline',
+            'reset_custom'
+        ]:
+            if event == 'generate' or event == 'generate_shortcut':
+                state.autogenerate = False
+            else:
+                state.autogenerate = True
+
+            if event == 'reset_baseline':
+                state.baseline = True
+            else:
+                state.baseline = False
+
+            if event in [
+                'file',
+                'next',
+                'next_shortcut',
+                'previous',
+                'previous_shortcut',
+                'reset_baseline',
+                'reset_custom'
+            ]:
+                state.load(window)
+
             state.set(data)
 
             spectrogram = canvas.prepare(window, state)

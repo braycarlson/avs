@@ -16,6 +16,25 @@ sg.theme('Reddit')
 sg.PySimpleGUI.TOOLTIP_BACKGROUND_COLOR = INPUT_BACKGROUND
 
 
+def popup(message):
+    layout = [
+        [sg.Text(message)]
+    ]
+
+    window = sg.Window(
+        message,
+        layout,
+        no_titlebar=True,
+        size=(150, 150),
+        location=(800, 300),
+        element_justification='center',
+        keep_on_top=True,
+        finalize=True
+    )
+
+    return window
+
+
 def filelist():
     initial_folder = WARBLER.joinpath('output/pickle')
 
