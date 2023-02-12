@@ -304,7 +304,10 @@ def layout():
             sg.Canvas(
                 key='canvas',
                 size=(1600, 300),
-                pad=(0, (10, 15))
+                pad=(
+                    (0, 0),
+                    (10, 15)
+                )
             )
         ],
         [

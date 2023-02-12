@@ -4,7 +4,7 @@ from datatype.spectrogram import Segment
 from scipy import ndimage
 
 
-def dynamic_threshold_segmentation(signal, settings):
+def dynamic_threshold_segmentation(signal, settings, full=False):
     # Make a copy of the original spectrogram
     segment = Segment(signal, settings)
     original = segment.generate()
@@ -53,12 +53,6 @@ def dynamic_threshold_segmentation(signal, settings):
             vocal_envelope > settings.silence_threshold
         ) / fft_rate
 
-        onsets_sil, offsets_sil = (
-            onsets_offsets(
-                vocal_envelope <= settings.silence_threshold
-            ) / fft_rate
-        )
-
     onset, offset = onsets_offsets(
         vocal_envelope > settings.silence_threshold
     ) / fft_rate
@@ -66,11 +60,18 @@ def dynamic_threshold_segmentation(signal, settings):
     # Threshold out short syllables
     mask = (offsets - onsets) >= settings.min_syllable_length_s
 
-    return {
+    template = {
         'onset': onset[mask],
-        'offset': offset[mask],
-        'spectrogram': spectrogram
+        'offset': offset[mask]
     }
+
+    if full:
+        vocal_envelope = vocal_envelope.astype('float32')
+
+        template['spectrogram'] = spectrogram
+        template['vocal_envelope'] = vocal_envelope
+
+    return template
 
 
 def onsets_offsets(signal):
@@ -86,7 +87,8 @@ def onsets_offsets(signal):
 
     onset, offset = np.array(
         [
-            np.where(elements == element)[0][np.array([0, -1])] + np.array([0, 1])
+            np.where(elements == element)[0][np.array([0, -1])] +
+            np.array([0, 1])
             for element in np.unique(elements)
             if element != 0
         ]

@@ -2,8 +2,11 @@ import json
 
 from constant import SETTINGS, WARBLER
 from datatype.dataset import Dataset
+from datatype.settings import Settings
+from datatype.signal import Signal
+from functools import partial
 from pathlib import Path
-from validation import IGNORE, REMOVE
+from validation import Input, IGNORE, REMOVE
 
 
 class State:
@@ -63,6 +66,75 @@ class State:
 
         self.autogenerate = True
         self.current = self.dataframe.iloc[self.index]
+
+    def settings(self):
+        if self.baseline:
+            path = SETTINGS.joinpath('spectrogram.json')
+        else:
+            path = WARBLER.joinpath(self.current.segmentation)
+
+        settings = Settings.from_file(path)
+
+        if not self.autogenerate:
+            ui = Input(self.ui)
+
+            if ui.validate():
+                data = ui.transform()
+                settings.update(data)
+
+        return settings
+
+    def signal(self):
+        if hasattr(self.current, 'signal'):
+            signal = self.current.signal
+        else:
+            settings = self.settings()
+
+            path = WARBLER.joinpath(self.current.recording)
+            signal = Signal(path)
+
+            path = SETTINGS.joinpath('dereverberate.json')
+            dereverberate = Settings.from_file(path)
+
+            callback = {}
+
+            if settings.bandpass_filter:
+                callback['filter'] = partial(
+                    signal.filter,
+                    settings.butter_lowcut,
+                    settings.butter_highcut
+                )
+
+            if settings.normalize:
+                callback['normalize'] = partial(signal.normalize)
+
+            if settings.dereverberate:
+                callback['dereverberate'] = partial(
+                    signal.dereverberate,
+                    dereverberate
+                )
+
+            if settings.reduce_noise:
+                callback['reduce'] = partial(signal.reduce)
+
+            # The order should match the warbler.py pipeline
+            path = SETTINGS.joinpath('order.json')
+            order = Settings.from_file(path)
+
+            functions = list(
+                dict(
+                    sorted(
+                        order.__dict__.items(),
+                        key=lambda x: x[1]
+                    )
+                ).keys()
+            )
+
+            for function in functions:
+                if function in callback:
+                    callback[function]()
+
+        return signal
 
     def set(self, ui):
         self.ui = ui

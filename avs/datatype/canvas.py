@@ -1,118 +1,134 @@
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
-import PySimpleGUI as sg
 
-from abc import ABC, abstractmethod
-from constant import ICON, SETTINGS, WARBLER
 from datatype.axes import SpectrogramAxes
 from datatype.segmentation import dynamic_threshold_segmentation
-from datatype.settings import Settings
-from datatype.signal import Signal
 from datatype.spectrogram import Linear, Spectrogram
-from event import on_click, on_draw
-from functools import partial
+from event import on_click
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.patches import Rectangle
-from theme import BUTTON_BACKGROUND
-from validation import Input
 
 
 class Canvas(FigureCanvasTkAgg):
-    def __init__(self, figure=None, master=None):
+    def __init__(self, figure=None, axis=None, master=None):
         super().__init__(figure=figure, master=master)
+        self.callback = None
+        self.axis = axis
         self.figure = figure
+        self.image = None
         self.canvas = self.get_tk_widget()
-        self.canvas.pack(side='top', fill='both', expand=True)
 
-    @property
-    def width(self):
-        return self.canvas.winfo_width() / 100
+    def display(self, window, state):
+        self.cleanup()
 
-    @property
-    def height(self):
-        return self.canvas.winfo_height() / 100
-
-    def prepare(self, window, state):
-        if state.baseline:
-            path = SETTINGS.joinpath('spectrogram.json')
-        else:
-            path = WARBLER.joinpath(state.current.segmentation)
-
-        settings = Settings.from_file(path)
-
-        if not state.autogenerate:
-            ui = Input(state.ui)
-
-            if ui.validate():
-                data = ui.transform()
-                settings.update(data)
-
-        if hasattr(state.current, 'signal'):
-            signal = state.current.signal
-        else:
-            path = WARBLER.joinpath(state.current.recording)
-            signal = Signal(path)
-
-            path = SETTINGS.joinpath('dereverberate.json')
-            dereverberate = Settings.from_file(path)
-
-            callback = {}
-
-            if settings.bandpass_filter:
-                callback['filter'] = partial(
-                    signal.filter,
-                    settings.butter_lowcut,
-                    settings.butter_highcut
-                )
-
-            if settings.normalize:
-                callback['normalize'] = partial(signal.normalize)
-
-            if settings.dereverberate:
-                callback['dereverberate'] = partial(
-                    signal.dereverberate,
-                    dereverberate
-                )
-
-            if settings.reduce_noise:
-                callback['reduce'] = partial(signal.reduce)
-
-            # The order should match the warbler.py pipeline
-            path = SETTINGS.joinpath('order.json')
-            order = Settings.from_file(path)
-
-            functions = list(
-                dict(
-                    sorted(
-                        order.__dict__.items(),
-                        key=lambda x: x[1]
-                    )
-                ).keys()
-            )
-
-            for function in functions:
-                if function in callback:
-                    callback[function]()
+        signal = state.signal()
+        settings = state.settings()
 
         spectrogram = Spectrogram()
         strategy = Linear(signal, settings)
         spectrogram.strategy = strategy
 
-        spectrogram = spectrogram.generate()
-
         mode = state.ui.get('mode')
 
         if mode == 'Exclusion':
-            image = ExclusionSpectrogram(settings, signal)
-            figure = image.create()
+            spectrogram = spectrogram.generate()
 
-            if figure is None:
-                return None
+            if spectrogram is None:
+                return False
 
-            patches = figure.gca().patches
+            dts = dynamic_threshold_segmentation(
+                signal,
+                settings
+            )
 
-            if patches:
-                length = len(patches) - 1
+            onsets = dts.get('onset')
+            offsets = dts.get('offset')
+
+            self.figure.patch.set_facecolor('#ffffff')
+            self.axis.patch.set_facecolor('#ffffff')
+
+            x_minimum = 0
+            x_maximum = signal.duration
+            y_minimum = 0
+            y_maximum = signal.rate / 2
+
+            extent = [
+                x_minimum,
+                x_maximum,
+                y_minimum,
+                y_maximum
+            ]
+
+            self.image = self.axis.matshow(
+                spectrogram,
+                aspect='auto',
+                cmap=plt.cm.Greys,
+                extent=extent,
+                interpolation=None,
+                origin='lower'
+            )
+
+            self.axis.initialize()
+            self.axis._x_lim(x_maximum)
+            self.axis._x_step(x_maximum)
+
+            ylmin, ylmax = self.axis.get_ylim()
+            ysize = (ylmax - ylmin) * 0.1
+            ymin = ylmax - ysize
+
+            blue = mcolors.to_rgba('#0079d3', alpha=0.75)
+            red = mcolors.to_rgba('#d1193e', alpha=0.75)
+
+            for index, (onset, offset) in enumerate(zip(onsets, offsets), 0):
+                if index in settings.exclude:
+                    color = red
+                else:
+                    color = blue
+
+                self.axis.axvline(
+                    onset,
+                    color=color,
+                    ls='dashed',
+                    lw=1,
+                    alpha=0.75
+                )
+
+                self.axis.axvline(
+                    offset,
+                    color=color,
+                    ls='dashed',
+                    lw=1,
+                    alpha=0.75
+                )
+
+                rectangle = Rectangle(
+                    xy=(onset, ymin),
+                    width=offset - onset,
+                    height=1000,
+                    alpha=0.75,
+                    color=color,
+                    label=str(index)
+                )
+
+                rx, ry = rectangle.get_xy()
+                cx = rx + rectangle.get_width() / 2.0
+                cy = ry + rectangle.get_height() / 2.0
+
+                self.axis.annotate(
+                    index,
+                    (cx, cy),
+                    color='white',
+                    weight=600,
+                    fontfamily='Arial',
+                    fontsize=8,
+                    ha='center',
+                    va='center'
+                )
+
+                self.axis.add_patch(rectangle)
+
+            if self.axis.patches:
+                length = len(self.axis.patches) - 1
 
                 remove = [
                     index
@@ -131,230 +147,84 @@ class Canvas(FigureCanvasTkAgg):
 
                 window['exclude'].update(notes)
 
-                figure.canvas.mpl_connect(
+                self.callback = self.figure.canvas.mpl_connect(
                     'button_press_event',
                     lambda event: on_click(
                         event,
                         window,
                         state,
-                        patches
+                        self.axis.patches
                     )
                 )
         else:
-            spectrogram = Spectrogram()
-            strategy = Linear(signal, settings)
-            spectrogram.strategy = strategy
-
             spectrogram = spectrogram.generate(normalize=False)
-            image = BandwidthSpectrogram(settings, signal, spectrogram)
-            figure = image.create()
 
-        return figure
+            if spectrogram is None:
+                return False
 
-    def close(self):
+            self.figure.patch.set_facecolor('#ffffff')
+            self.axis.patch.set_facecolor('#ffffff')
+
+            x_minimum = 0
+            x_maximum = signal.duration
+            y_minimum = 0
+            y_maximum = signal.rate / 2
+
+            extent = [
+                x_minimum,
+                x_maximum,
+                y_minimum,
+                y_maximum
+            ]
+
+            self.image = self.axis.matshow(
+                spectrogram,
+                aspect='auto',
+                cmap=plt.cm.Greys,
+                extent=extent,
+                interpolation=None,
+                origin='lower'
+            )
+
+            self.axis.initialize()
+            self.axis._x_lim(x_maximum)
+            self.axis._x_step(x_maximum)
+
+            color = mcolors.to_rgba('#d1193e', alpha=0.75)
+
+            self.axis.axhline(
+                settings.butter_lowcut,
+                color=color,
+                ls='dashed',
+                lw=1,
+                alpha=1
+            )
+
+            self.axis.axhline(
+                settings.butter_highcut - 100,
+                color=color,
+                ls='dashed',
+                lw=1,
+                alpha=1
+            )
+
+        self.canvas.pack(side='top', fill='both', expand=True)
+        self.draw()
+
+    def cleanup(self):
+        if self.callback is not None:
+            self.figure.canvas.mpl_disconnect(self.callback)
+
+        for text in self.axis.texts:
+            text.remove()
+
+        for patch in self.axis.patches:
+            patch.remove()
+
+        for line in self.axis.lines:
+            line.remove()
+
+        if self.image is not None:
+            self.image.remove()
+
         plt.close(self.figure)
-
-    def set(self, figure):
-        self.close()
-
-        self.figure = figure
-        self.figure.set_figwidth(self.width)
-        self.figure.set_figheight(self.height)
-
-
-class Plot(ABC):
-    @abstractmethod
-    def create(self):
-        pass
-
-    def plot(self, **kwargs):
-        ax = kwargs.pop('ax')
-        signal = kwargs.pop('signal')
-        spectrogram = kwargs.pop('spectrogram')
-
-        x_minimum = 0
-        x_maximum = signal.duration
-        y_minimum = 0
-        y_maximum = signal.rate / 2
-
-        extent = [
-            x_minimum,
-            x_maximum,
-            y_minimum,
-            y_maximum
-        ]
-
-        image = ax.matshow(
-            spectrogram,
-            aspect='auto',
-            extent=extent,
-            interpolation=None,
-            origin='lower',
-            **kwargs
-        )
-
-        ax.initialize()
-        ax._x_lim(x_maximum)
-        ax._x_step(x_maximum)
-
-        return image
-
-
-class ExclusionSpectrogram(Plot):
-    def __init__(self, settings, signal):
-        self.settings = settings
-        self.signal = signal
-
-    def create(self):
-        try:
-            dts = dynamic_threshold_segmentation(
-                self.signal,
-                self.settings
-            )
-
-            spectrogram = dts.get('spectrogram')
-            onsets = dts.get('onset')
-            offsets = dts.get('offset')
-        except AttributeError as exception:
-            print(exception)
-
-            sg.Popup(
-                'Please adjust the parameter(s)',
-                title='Error',
-                icon=ICON,
-                button_color=BUTTON_BACKGROUND,
-                keep_on_top=True
-            )
-
-            return None
-        except Exception as exception:
-            print(exception)
-
-            sg.Popup(
-                'Please adjust the parameter(s)',
-                title='Error',
-                icon=ICON,
-                button_color=BUTTON_BACKGROUND,
-                keep_on_top=True
-            )
-
-            return None
-
-        fig, ax = plt.subplots(
-            figsize=(18, 3),
-            subplot_kw={'projection': 'spectrogram'}
-        )
-
-        fig.patch.set_facecolor('#ffffff')
-        ax.patch.set_facecolor('#ffffff')
-
-        self.plot(
-            ax=ax,
-            cmap=plt.cm.Greys,
-            signal=self.signal,
-            spectrogram=spectrogram
-        )
-
-        ylmin, ylmax = ax.get_ylim()
-        ysize = (ylmax - ylmin) * 0.1
-        ymin = ylmax - ysize
-
-        blue = mcolors.to_rgba('#0079d3', alpha=0.75)
-        red = mcolors.to_rgba('#d1193e', alpha=0.75)
-
-        for index, (onset, offset) in enumerate(zip(onsets, offsets), 0):
-            if index in self.settings.exclude:
-                color = red
-            else:
-                color = blue
-
-            ax.axvline(
-                onset,
-                color=color,
-                ls='dashed',
-                lw=1,
-                alpha=0.75
-            )
-
-            ax.axvline(
-                offset,
-                color=color,
-                ls='dashed',
-                lw=1,
-                alpha=0.75
-            )
-
-            rectangle = Rectangle(
-                xy=(onset, ymin),
-                width=offset - onset,
-                height=1000,
-                alpha=0.75,
-                color=color,
-                label=str(index)
-            )
-
-            rx, ry = rectangle.get_xy()
-            cx = rx + rectangle.get_width() / 2.0
-            cy = ry + rectangle.get_height() / 2.0
-
-            ax.annotate(
-                index,
-                (cx, cy),
-                color='white',
-                weight=600,
-                fontfamily='Arial',
-                fontsize=8,
-                ha='center',
-                va='center'
-            )
-
-            ax.add_patch(rectangle)
-
-        plt.tight_layout()
-        return fig
-
-
-class BandwidthSpectrogram(Plot):
-    def __init__(self, settings, signal, spectrogram):
-        self.settings = settings
-        self.signal = signal
-        self.spectrogram = spectrogram
-
-    def create(self):
-        fig, ax = plt.subplots(
-            figsize=(18, 3),
-            subplot_kw={'projection': 'spectrogram'}
-        )
-
-        cmap = plt.cm.Greys
-
-        self.plot(
-            ax=ax,
-            cmap=cmap,
-            signal=self.signal,
-            spectrogram=self.spectrogram.data
-        )
-
-        fig.patch.set_facecolor('#ffffff')
-        ax.patch.set_facecolor('#ffffff')
-
-        color = mcolors.to_rgba('#d1193e', alpha=0.75)
-
-        ax.axhline(
-            self.settings.butter_lowcut,
-            color=color,
-            ls='dashed',
-            lw=1,
-            alpha=1
-        )
-
-        ax.axhline(
-            self.settings.butter_highcut,
-            color=color,
-            ls='dashed',
-            lw=1,
-            alpha=1
-        )
-
-        plt.tight_layout()
-        return fig

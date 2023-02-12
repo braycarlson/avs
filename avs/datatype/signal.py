@@ -19,7 +19,7 @@ class Strategy(ABC):
 class Librosa(Strategy):
     def load(self, path):
         path = path.as_posix()
-        data, rate = librosa.core.load(path)
+        data, rate = librosa.core.load(path, sr=None)
         return rate, data
 
 

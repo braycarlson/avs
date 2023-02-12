@@ -36,10 +36,16 @@ def main():
 
     register_keybind(window)
 
-    figsize = (16, 3)
-    fig = plt.figure(figsize=figsize)
+    fig, ax = plt.subplots(
+        figsize=(18, 3),
+        subplot_kw={'projection': 'spectrogram'}
+    )
+
+    fig.set_tight_layout(True)
+
     tk_canvas = window['canvas'].tk_canvas
-    canvas = Canvas(fig, tk_canvas)
+    canvas = Canvas(fig, ax, tk_canvas)
+    canvas.canvas.pack_forget()
 
     state = State()
     state.warbler = WARBLER
@@ -136,17 +142,11 @@ def main():
 
         if event == 'next' or event == 'next_shortcut':
             state.next()
-
-            window['file'].update(
-                set_to_index=state.index,
-            )
+            window['file'].update(set_to_index=state.index)
 
         if event == 'previous' or event == 'previous_shortcut':
             state.previous()
-
-            window['file'].update(
-                set_to_index=state.index,
-            )
+            window['file'].update(set_to_index=state.index)
 
         if event in [
             'browse',
@@ -184,13 +184,10 @@ def main():
 
             state.set(data)
 
-            spectrogram = canvas.prepare(window, state)
+            success = canvas.display(window, state)
 
-            if spectrogram is None:
+            if success is False:
                 continue
-
-            canvas.set(spectrogram)
-            canvas.draw()
 
         if event == 'play':
             path = WARBLER.joinpath(state.current.recording)
