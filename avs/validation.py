@@ -1,5 +1,4 @@
 import PySimpleGUI as sg
-import string
 
 from abc import ABC, abstractmethod
 from constant import ICON
@@ -7,6 +6,7 @@ from constant import ICON
 
 # The input field to ignore
 IGNORE = (
+    'exclude',
     'griffin_lim_iters',
     'mask_spec_kwargs',
     'noise_reduce_kwargs',
@@ -19,12 +19,11 @@ REMOVE = (
     'canvas',
     'explorer',
     'file',
-    'mode'
+    'mode',
 )
 
 # The input field to ignore in favor of custom processing
 CUSTOM = (
-    'exclude',
     'spectral_range_low',
     'spectral_range_high'
 )
@@ -38,9 +37,9 @@ INTEGER = (
     'min_level_db',
     'min_level_db_floor',
     'db_delta',
+    'num_mel_bins',
     'spectral_range_low',
     'spectral_range_high',
-    'num_mel_bins',
     'mel_lower_edge_hertz',
     'mel_upper_edge_hertz',
     'butter_lowcut',
@@ -62,7 +61,8 @@ BOOLEAN = (
     'reduce_noise',
     'normalize',
     'dereverberate',
-    'mask_spec'
+    'mask_spec',
+    'realtime'
 )
 
 # The accepted punctuation for an input field
@@ -94,32 +94,6 @@ def to_digit(data):
     ]
 
     return ''.join(numerical)
-
-
-def to_exclusion(data):
-    exclude = []
-
-    table = str.maketrans(
-        dict.fromkeys(
-            string.ascii_letters + string.punctuation
-        )
-    )
-
-    translation = data.translate(table)
-
-    if translation:
-        digit = [
-            int(character)
-            for character in translation.strip().split(' ')
-        ]
-
-        digit = sorted(
-            set(digit)
-        )
-
-        exclude.extend(digit)
-
-    return exclude
 
 
 class Input:
@@ -165,17 +139,18 @@ class Input:
             if f(k) is not None
         })
 
-        # Exclude
-        exclude = self.data.get('exclude')
-        parameter = to_exclusion(exclude)
-        self.data['exclude'] = parameter
-
         # Spectral Range
-        low = self.data.pop('spectral_range_low')
-        high = self.data.pop('spectral_range_high')
+        condition = (
+            'spectral_range_low' in self.data or
+            'spectral_range_high' in self.data
+        )
 
-        parameter = [low, high]
-        self.data['spectral_range'] = parameter
+        if condition:
+            low = self.data.pop('spectral_range_low')
+            high = self.data.pop('spectral_range_high')
+
+            parameter = [low, high]
+            self.data['spectral_range'] = parameter
 
         return self.data
 

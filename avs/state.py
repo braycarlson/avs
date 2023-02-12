@@ -18,6 +18,7 @@ class State:
         self.current = None
         self.dataframe = None
         self.exclude = set()
+        self.realtime = False
         self.ui = None
         self._warbler = None
 
@@ -87,9 +88,10 @@ class State:
     def signal(self):
         if hasattr(self.current, 'signal'):
             signal = self.current.signal
-        else:
-            settings = self.settings()
 
+        settings = self.settings()
+
+        if not hasattr(self.current, 'signal') or settings.realtime:
             path = WARBLER.joinpath(self.current.recording)
             signal = Signal(path)
 
@@ -170,9 +172,3 @@ class State:
 
         self.exclude.clear()
         self.exclude.update(exclude)
-
-        if exclude:
-            notes = ', '.join([str(note) for note in exclude])
-            window['exclude'].update(notes)
-        else:
-            window['exclude'].update('')

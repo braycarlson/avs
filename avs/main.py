@@ -205,6 +205,7 @@ def main():
                 continue
 
             data = ui.transform()
+            data['exclude'] = list(state.exclude)
 
             path = WARBLER.joinpath(state.current.segmentation)
 

@@ -3,28 +3,7 @@ import matplotlib.colors as mcolors
 from matplotlib.backend_bases import MouseButton
 
 
-def on_draw(event, window, state, patches):
-    length = len(patches) - 1
-
-    remove = [
-        index
-        for index in state.exclude
-        if index > length
-    ]
-
-    state.exclude.difference_update(remove)
-
-    notes = ', '.join(
-        [
-            str(note)
-            for note in sorted(state.exclude)
-        ]
-    )
-
-    window['exclude'].update(notes)
-
-
-def on_click(event, window, state, patches):
+def on_click(event, state, patches):
     if event.inaxes is None:
         return
 
@@ -52,16 +31,10 @@ def on_click(event, window, state, patches):
                     color = red
                     state.exclude.add(label)
 
+                print(state.exclude)
+
                 patch.set_color(color)
                 event.inaxes.lines[index].set_color(color)
                 event.inaxes.lines[index + 1].set_color(color)
 
-                notes = ', '.join(
-                    [
-                        str(note)
-                        for note in sorted(state.exclude)
-                    ]
-                )
-
-                window['exclude'].update(notes)
                 event.canvas.draw()

@@ -138,20 +138,10 @@ class Canvas(FigureCanvasTkAgg):
 
                 state.exclude.difference_update(remove)
 
-                notes = ', '.join(
-                    [
-                        str(note)
-                        for note in sorted(state.exclude)
-                    ]
-                )
-
-                window['exclude'].update(notes)
-
                 self.callback = self.figure.canvas.mpl_connect(
                     'button_press_event',
                     lambda event: on_click(
                         event,
-                        window,
                         state,
                         self.axis.patches
                     )

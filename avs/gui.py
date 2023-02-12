@@ -229,15 +229,14 @@ def layout():
     ]
 
     right = [
-
+        parameter(
+            'num_mel_bins',
+            # tooltip=''
+        ),
         parameter(
             'spectral_range',
             multi=True,
             tooltip='The spectral range to care about for the spectrogram'
-        ),
-        parameter(
-            'num_mel_bins',
-            # tooltip=''
         ),
         parameter(
             'mel_lower_edge_hertz',
@@ -276,10 +275,8 @@ def layout():
             # tooltip=''
         ),
         parameter(
-            'exclude',
-            tooltip='A list of indices, which correspond to each segment of a recording',
-            disabled=True,
-            use_readonly_for_disable=True
+            'realtime',
+            tooltip='Generate spectrogram and apply filter(s) in realtime'
         )
     ]
 
