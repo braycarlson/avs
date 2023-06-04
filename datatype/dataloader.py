@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 
 from constant import SETTINGS, WARBLER
@@ -6,10 +8,10 @@ from datatype.settings import Settings
 from datatype.signal import Signal
 from functools import partial
 from pathlib import Path
-from validation import Input, IGNORE, REMOVE
+# from validation import Input, IGNORE, REMOVE
 
 
-class State:
+class Dataloader:
     def __init__(self):
         self.index = 0
         self.length = 0
@@ -18,12 +20,13 @@ class State:
         self.current = None
         self.dataframe = None
         self.exclude = set()
+        self.filelist = None
         self.realtime = False
         self.ui = None
-        self._warbler = None
+        self.warbler = None
 
     @property
-    def empty(self):
+    def empty(self) -> bool:
         data = self.get_all()
 
         if data is None or len(data) == 0:
@@ -31,26 +34,19 @@ class State:
 
         return False
 
-    @property
-    def warbler(self):
-        return self._warbler
-
-    @warbler.setter
-    def warbler(self, warbler):
-        self._warbler = warbler
-
-    def get_all(self):
+    def get_all(self) -> list[str]:
         return self.dataframe.filename.to_list()
 
-    def open(self, path):
+    def open(self, path: str | Path) -> None:
         filename = Path(path).stem
 
         dataset = Dataset(filename)
         self.dataframe = dataset.load()
         self.current = self.dataframe.iloc[self.index]
         self.length = len(self.dataframe)
+        self.filelist = self.get_all()
 
-    def next(self):
+    def next(self) -> None:
         if self.index == self.length - 1:
             self.index = 0
         else:
@@ -59,7 +55,7 @@ class State:
         self.autogenerate = True
         self.current = self.dataframe.iloc[self.index]
 
-    def previous(self):
+    def previous(self) -> None:
         if self.index == 0:
             self.index = self.length - 1
         else:
@@ -68,7 +64,7 @@ class State:
         self.autogenerate = True
         self.current = self.dataframe.iloc[self.index]
 
-    def settings(self):
+    def settings(self) -> Settings:
         if self.baseline:
             path = SETTINGS.joinpath('spectrogram.json')
         else:
@@ -76,16 +72,16 @@ class State:
 
         settings = Settings.from_file(path)
 
-        if not self.autogenerate:
-            ui = Input(self.ui)
+        # if not self.autogenerate:
+        #     ui = Input(self.ui)
 
-            if ui.validate():
-                data = ui.transform()
-                settings.update(data)
+        #     if ui.validate():
+        #         data = ui.transform()
+        #         settings.update(data)
 
         return settings
 
-    def signal(self):
+    def signal(self) -> Signal:
         if hasattr(self.current, 'signal'):
             signal = self.current.signal
 
@@ -138,37 +134,37 @@ class State:
 
         return signal
 
-    def set(self, ui):
-        self.ui = ui
+    # def set(self, ui) -> None:
+    #     self.ui = ui
 
-    def update(self, filename):
+    def update(self, filename: str) -> None:
         data = self.get_all()
 
         self.index = data.index(filename)
         self.current = self.dataframe.iloc[self.index]
 
-    def load(self, window):
-        if self.baseline:
-            path = SETTINGS.joinpath('spectrogram.json')
-        else:
-            path = WARBLER.joinpath(self.current.segmentation)
+    # def load(self, window) -> None:
+    #     if self.baseline:
+    #         path = SETTINGS.joinpath('spectrogram.json')
+    #     else:
+    #         path = WARBLER.joinpath(self.current.segmentation)
 
-        with open(path, 'r') as handle:
-            settings = json.load(handle)
+    #     with open(path, 'r') as handle:
+    #         settings = json.load(handle)
 
-        for key in settings.keys():
-            if key in IGNORE or key in REMOVE:
-                continue
+    #     for key in settings:
+    #         if key in IGNORE or key in REMOVE:
+    #             continue
 
-            if key == 'spectral_range':
-                low, high = settings[key]
+    #         if key == 'spectral_range':
+    #             low, high = settings[key]
 
-                window['spectral_range_low'].update(low)
-                window['spectral_range_high'].update(high)
-            else:
-                window[key].update(settings[key])
+    #             window['spectral_range_low'].update(low)
+    #             window['spectral_range_high'].update(high)
+    #         else:
+    #             window[key].update(settings[key])
 
-        exclude = settings.get('exclude')
+    #     exclude = settings.get('exclude')
 
-        self.exclude.clear()
-        self.exclude.update(exclude)
+    #     self.exclude.clear()
+    #     self.exclude.update(exclude)
