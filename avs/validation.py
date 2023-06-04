@@ -10,7 +10,8 @@ IGNORE = (
     'griffin_lim_iters',
     'mask_spec_kwargs',
     'noise_reduce_kwargs',
-    'power'
+    'power',
+    'sample_rate'
 )
 
 # The input field to remove

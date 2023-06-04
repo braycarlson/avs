@@ -20,6 +20,7 @@
     "mel_upper_edge_hertz": 10000,
     "butter_lowcut": 1500,
     "butter_highcut": 10000,
+    "sample_rate": 44100,
     "bandpass_filter": true,
     "reduce_noise": false,
     "normalize": true,

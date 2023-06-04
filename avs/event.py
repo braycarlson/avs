@@ -26,12 +26,14 @@ def on_click(event, state, patches):
 
                 if facecolor == red:
                     color = blue
-                    state.exclude.remove(label)
+
+                    if label in state.exclude:
+                        state.exclude.remove(label)
                 else:
                     color = red
-                    state.exclude.add(label)
 
-                print(state.exclude)
+                    if label not in state.exclude:
+                        state.exclude.add(label)
 
                 patch.set_color(color)
                 event.inaxes.lines[index].set_color(color)

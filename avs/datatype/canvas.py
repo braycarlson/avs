@@ -5,6 +5,7 @@ from datatype.axes import SpectrogramAxes
 from datatype.segmentation import dynamic_threshold_segmentation
 from datatype.spectrogram import Linear, Spectrogram
 from event import on_click
+from librosa.util.exceptions import ParameterError
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.patches import Rectangle
 
@@ -19,9 +20,17 @@ class Canvas(FigureCanvasTkAgg):
         self.canvas = self.get_tk_widget()
 
     def display(self, window, state):
+        try:
+            signal = state.signal()
+        except ParameterError:
+            print(state.current.recording)
+            return False
+        except Exception:
+            print(state.current.recording)
+            return False
+
         self.cleanup()
 
-        signal = state.signal()
         settings = state.settings()
 
         spectrogram = Spectrogram()
@@ -31,15 +40,26 @@ class Canvas(FigureCanvasTkAgg):
         mode = state.ui.get('mode')
 
         if mode == 'Exclusion':
-            spectrogram = spectrogram.generate()
+            try:
+                spectrogram = spectrogram.generate()
+            except ParameterError:
+                print(state.current.recording)
+                return False
 
             if spectrogram is None:
                 return False
 
-            dts = dynamic_threshold_segmentation(
-                signal,
-                settings
-            )
+            try:
+                dts = dynamic_threshold_segmentation(
+                    signal,
+                    settings
+                )
+            except ValueError:
+                print(state.current.recording)
+                return False
+            except UnboundLocalError:
+                print(state.current.recording)
+                return False
 
             onsets = dts.get('onset')
             offsets = dts.get('offset')
@@ -215,6 +235,9 @@ class Canvas(FigureCanvasTkAgg):
             line.remove()
 
         if self.image is not None:
-            self.image.remove()
+            try:
+                self.image.remove()
+            except ValueError as exception:
+                print(exception)
 
         plt.close(self.figure)
