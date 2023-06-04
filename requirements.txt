@@ -1,13 +1,11 @@
--e avs
-
 librosa
+matplotlib
 nara_wpe
 natsort
 noisereduce
 numpy
 pandas
-PySide2
-pysimplegui
+PyQt6
 scipy
 seaborn
 tensorflow
