@@ -11,8 +11,8 @@ class Floating(QWidget):
     def __init__(self):
         super().__init__()
 
-        # self.icon = QIcon('asset/logo.png')
-        # self.setWindowIcon(self.icon)
+        self.icon = QIcon('asset/avs.png')
+        self.setWindowIcon(self.icon)
 
     def geometry(self) -> None:
         screen = (

@@ -1,11 +1,10 @@
 [project]
-name = "reverb"
-description = "A exploratory project into reverberation classification"
+name = "Animal Vocalization Segmentation"
+description = "Animal Vocalization Segmentation (AVS) is a GUI tool to provide manual intervention during vocalization segmentation. It is to be used in conjunction with warbler.py."
 version = "1.0"
 authors = [
-    { name = "Angela De Sousa Costa", email = "angela.desousacosta@uleth.ca" },
-    { name = "Brayden Carlson", email = "braycarlson@hotmail.com" },
-    { name = "Tyrell Martens", email = "tyrell.martens@uleth.ca" }
+    { name = "Samantha Huang", email = "huang5@uleth.ca" },
+    { name = "Brayden Carlson", email = "braycarlson@hotmail.com" }
 ]
 
 [tool.ruff]

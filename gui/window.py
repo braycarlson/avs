@@ -13,6 +13,7 @@ from gui.scroll import ScrollableWindow
 from gui.parameter import Parameter
 from matplotlib.figure import Figure
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import (
     QMainWindow,
     QHBoxLayout,
@@ -36,6 +37,9 @@ class Window(QMainWindow):
         self.exclude = set()
 
         self.setWindowTitle('avs')
+
+        self.icon = QIcon('asset/avs.png')
+        self.setWindowIcon(self.icon)
 
         # Set up the QWidget and the layout
         self.widget = QWidget()
