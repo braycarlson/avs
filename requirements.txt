@@ -5,6 +5,7 @@ natsort
 noisereduce
 numpy
 pandas
+platformdirs
 PyQt6
 scipy
 seaborn

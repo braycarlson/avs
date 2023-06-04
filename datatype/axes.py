@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import matplotlib.ticker as ticker
 import numpy as np
 

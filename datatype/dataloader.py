@@ -1,29 +1,27 @@
 from __future__ import annotations
 
-import json
-
-from constant import SETTINGS, WARBLER
 from datatype.dataset import Dataset
 from datatype.settings import Settings
 from datatype.signal import Signal
 from functools import partial
 from pathlib import Path
-# from validation import Input, IGNORE, REMOVE
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from datatype.parser import Parser
 
 
 class Dataloader:
-    def __init__(self):
+    def __init__(self, parser: Parser = None):
         self.index = 0
         self.length = 0
-        self.autogenerate = True
         self.baseline = False
         self.current = None
         self.dataframe = None
-        self.exclude = set()
         self.filelist = None
+        self.parser = parser
         self.realtime = False
         self.ui = None
-        self.warbler = None
 
     @property
     def empty(self) -> bool:
@@ -42,6 +40,7 @@ class Dataloader:
 
         dataset = Dataset(filename)
         self.dataframe = dataset.load()
+
         self.current = self.dataframe.iloc[self.index]
         self.length = len(self.dataframe)
         self.filelist = self.get_all()
@@ -52,7 +51,6 @@ class Dataloader:
         else:
             self.index = self.index + 1
 
-        self.autogenerate = True
         self.current = self.dataframe.iloc[self.index]
 
     def previous(self) -> None:
@@ -61,25 +59,25 @@ class Dataloader:
         else:
             self.index = self.index - 1
 
-        self.autogenerate = True
         self.current = self.dataframe.iloc[self.index]
 
     def settings(self) -> Settings:
         if self.baseline:
-            path = SETTINGS.joinpath('spectrogram.json')
+            path = (
+                self
+                .parser
+                .settings
+                .joinpath('spectrogram.json')
+            )
         else:
-            path = WARBLER.joinpath(self.current.segmentation)
+            path = (
+                self
+                .parser
+                .dataset
+                .joinpath(self.current.segmentation)
+            )
 
-        settings = Settings.from_file(path)
-
-        # if not self.autogenerate:
-        #     ui = Input(self.ui)
-
-        #     if ui.validate():
-        #         data = ui.transform()
-        #         settings.update(data)
-
-        return settings
+        return Settings.from_file(path)
 
     def signal(self) -> Signal:
         if hasattr(self.current, 'signal'):
@@ -88,10 +86,16 @@ class Dataloader:
         settings = self.settings()
 
         if not hasattr(self.current, 'signal') or settings.realtime:
-            path = WARBLER.joinpath(self.current.recording)
+            path = (
+                self
+                .parser
+                .dataset
+                .joinpath(self.current.recording)
+            )
+
             signal = Signal(path)
 
-            path = SETTINGS.joinpath('dereverberate.json')
+            path = self.parser.settings.joinpath('dereverberate.json')
             dereverberate = Settings.from_file(path)
 
             callback = {}
@@ -116,7 +120,7 @@ class Dataloader:
                 callback['reduce'] = partial(signal.reduce)
 
             # The order should match the warbler.py pipeline
-            path = SETTINGS.joinpath('order.json')
+            path = self.parser.settings.joinpath('order.json')
             order = Settings.from_file(path)
 
             functions = list(
@@ -134,37 +138,8 @@ class Dataloader:
 
         return signal
 
-    # def set(self, ui) -> None:
-    #     self.ui = ui
-
     def update(self, filename: str) -> None:
         data = self.get_all()
 
         self.index = data.index(filename)
         self.current = self.dataframe.iloc[self.index]
-
-    # def load(self, window) -> None:
-    #     if self.baseline:
-    #         path = SETTINGS.joinpath('spectrogram.json')
-    #     else:
-    #         path = WARBLER.joinpath(self.current.segmentation)
-
-    #     with open(path, 'r') as handle:
-    #         settings = json.load(handle)
-
-    #     for key in settings:
-    #         if key in IGNORE or key in REMOVE:
-    #             continue
-
-    #         if key == 'spectral_range':
-    #             low, high = settings[key]
-
-    #             window['spectral_range_low'].update(low)
-    #             window['spectral_range_high'].update(high)
-    #         else:
-    #             window[key].update(settings[key])
-
-    #     exclude = settings.get('exclude')
-
-    #     self.exclude.clear()
-    #     self.exclude.update(exclude)

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QCloseEvent, QGuiApplication, QIcon
-from PyQt6.QtWidgets import QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QWidget
 
 
 class Floating(QWidget):
@@ -24,8 +24,8 @@ class Floating(QWidget):
         self.screen_width = screen.width()
         self.screen_height = screen.height()
 
-        self.window_width = self.width() / 4
-        self.window_height = self.height() / 4
+        self.window_width = self.width()
+        self.window_height = self.height()
 
         self.wt = (self.screen_width - self.window_width) / 2
         self.ht = (self.screen_height - self.window_height) / 2

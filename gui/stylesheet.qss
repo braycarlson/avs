@@ -22,6 +22,6 @@ QScrollBar::sub-page:vertical {
     background-color: #333333
 }
 
-#Generate {
+#Generate, #Save {
     background-color: #0079d3;
 }

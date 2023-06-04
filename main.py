@@ -14,7 +14,6 @@ def main() -> None:
 
     window = Window()
     window.resize(1600, 800)
-    window.show()
     window.showNormal()
     window.setFocus()
 
@@ -24,7 +23,8 @@ def main() -> None:
     app.setStyle('Fusion')
     app.setStyleSheet(stylesheet)
 
-    sys.exit(app.exec())
+    handle = app.exec()
+    sys.exit(handle)
 
 
 if __name__ == "__main__":

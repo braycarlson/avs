@@ -1,30 +1,35 @@
 from __future__ import annotations
 
 from gui.floating import Floating
-from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtGui import QCloseEvent, QGuiApplication, QIcon
 from PyQt6.QtWidgets import (
-    QDialog,
+    QFileDialog,
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QMessageBox,
     QPushButton,
-    QFileDialog,
     QVBoxLayout
 )
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from datatype.parser import Parser
 
 
 class Preferences(Floating):
-    def __init__(self):
+    def __init__(self, parser: Parser = None):
         super().__init__()
 
-        self.setWindowTitle('Preferences')
-        self.layout = QVBoxLayout(self)
+        self.parser = parser
 
+        self.setWindowTitle('Preferences')
         self.setFixedSize(400, 200)
+
+        self.layout = QVBoxLayout(self)
 
         dlayout = QHBoxLayout()
         slayout = QHBoxLayout()
+        group = QHBoxLayout()
 
         dlabel = QLabel('Dataset:')
         slabel = QLabel('Settings:')
@@ -50,13 +55,31 @@ class Preferences(Floating):
         dlayout.addWidget(dbrowse)
         slayout.addWidget(sbrowse)
 
+        dataset = str(self.parser.dataset)
+        settings = str(self.parser.settings)
+
+        self.dataset.setText(dataset)
+        self.settings.setText(settings)
+
+        self.save = QPushButton('Save')
+        self.cancel = QPushButton('Cancel')
+
+        self.save.clicked.connect(self.on_save)
+        self.cancel.clicked.connect(self.on_cancel)
+
+        self.save.setObjectName('Save')
+
+        group.addWidget(self.save)
+        group.addWidget(self.cancel)
+
         self.layout.addLayout(dlayout)
         self.layout.addLayout(slayout)
+        self.layout.addLayout(group)
 
         self.setLayout(self.layout)
 
-    def load(self) -> None:
-        pass
+    def on_cancel(self) -> None:
+        self.exit.emit(True)
 
     def on_dbrowse(self) -> None:
         dialog = QFileDialog()
@@ -65,6 +88,20 @@ class Preferences(Floating):
         if dialog.exec() == QFileDialog.DialogCode.Accepted:
             path, *_ = dialog.selectedFiles()
             self.dataset.setText(path)
+
+    def on_save(self) -> None:
+        settings = {
+            'dataset': self.dataset.text(),
+            'settings': self.settings.text(),
+        }
+
+        self.parser.save(settings)
+
+        QMessageBox.information(
+            self,
+            'Success',
+            'Preferences saved.'
+        )
 
     def on_sbrowse(self) -> None:
         dialog = QFileDialog()
