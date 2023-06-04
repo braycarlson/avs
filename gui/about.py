@@ -1,13 +1,9 @@
 from __future__ import annotations
 
 from gui.floating import Floating
-from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtGui import QCloseEvent, QGuiApplication, QIcon
-from PyQt6.QtWidgets import (
-    QLabel,
-    QVBoxLayout,
-    QWidget
-)
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QFont
+from PyQt6.QtWidgets import QVBoxLayout, QLabel
 
 
 class About(Floating):
@@ -15,13 +11,14 @@ class About(Floating):
         super().__init__()
 
         self.setWindowTitle('About')
+        self.setFixedSize(250, 100)
+
         self.layout = QVBoxLayout(self)
+        self.layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        name = 'Samantha Huang & Brayden Carlson'
-        author = QLabel(f"Author(s): {name}")
-
-        license = QLabel('License: GPL v3')
-        copyright = QLabel('Copyright© 2023')
+        author = QLabel('Samantha Huang & Brayden Carlson')
+        license = QLabel('GPL v3')
+        copyright = QLabel('Copyright © 2023')
 
         self.layout.addWidget(author)
         self.layout.addWidget(license)

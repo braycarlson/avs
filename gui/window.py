@@ -1,31 +1,24 @@
 from __future__ import annotations
 
-import pickle
-
-from ast import literal_eval
 from datatype.dataloader import Dataloader
-from datatype.signal import Signal
+from datatype.parser import Parser
 from datatype.settings import Settings
-from gui.canvas import Canvas
 from gui.explorer import FileExplorer
 from gui.menubar import Menubar
 from gui.scroll import ScrollableWindow
 from gui.parameter import Parameter
 from matplotlib.figure import Figure
+from os import startfile
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import (
+    QApplication,
     QMainWindow,
+    QMessageBox,
     QHBoxLayout,
     QVBoxLayout,
     QPushButton,
     QFileDialog,
-    QFrame,
-    QLabel,
-    QLineEdit,
-    QScrollArea,
-    QSizeGrip,
-    QSizePolicy,
     QWidget
 )
 
@@ -33,23 +26,24 @@ from PyQt6.QtWidgets import (
 class Window(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.dataframe = None
-        self.exclude = set()
 
         self.setWindowTitle('avs')
 
         self.icon = QIcon('asset/avs.png')
         self.setWindowIcon(self.icon)
 
-        # Set up the QWidget and the layout
+        self.move(100, 100)
+
+        self.parser = Parser()
+        self.dataframe = None
+
         self.widget = QWidget()
         self.setCentralWidget(self.widget)
         self.layout = QVBoxLayout(self.widget)
 
-        self.menu = Menubar()
+        self.menu = Menubar(self.parser)
         self.layout.setMenuBar(self.menu)
 
-        # Set up the file loading button
         self.explorer = FileExplorer()
         self.layout.addWidget(self.explorer)
 
@@ -103,9 +97,21 @@ class Window(QMainWindow):
         self.previous.clicked.connect(self.on_previous)
         self.explorer.box.currentIndexChanged.connect(self.on_file_change)
         self.explorer.button.clicked.connect(self.on_click_load)
+        self.menu.play.connect(self.on_click_play)
+        self.menu.reset_to_baseline.connect(self.on_click_reset_baseline)
+        self.menu.reset_to_custom.connect(self.on_click_reset_custom)
+        self.menu.settings.connect(self.on_click_settings)
+        self.menu.save.connect(self.on_click_save)
+        self.menu.exit.connect(QApplication.quit)
 
     def on_generate(self) -> None:
         if len(self.explorer.box) == 0:
+            QMessageBox.warning(
+                self,
+                'Warning',
+                'Please load a dataset.'
+            )
+
             return
 
         index = self.explorer.box.currentText()
@@ -113,13 +119,30 @@ class Window(QMainWindow):
 
         self.scrollable.canvas.cleanup()
 
+        parameters = self.parameter.get()
+        settings = Settings.from_dict(parameters)
+
+        settings['exclude'] = (
+            self
+            .dataloader
+            .current
+            .settings
+            .exclude
+        )
+
         self.scrollable.display(
             self.dataloader.current.signal,
-            self.dataloader.current.settings
+            settings
         )
 
     def on_next(self) -> None:
         if len(self.explorer.box) == 0:
+            QMessageBox.warning(
+                self,
+                'Warning',
+                'Please load a dataset.'
+            )
+
             return
 
         self.dataloader.next()
@@ -127,6 +150,12 @@ class Window(QMainWindow):
 
     def on_previous(self) -> None:
         if len(self.explorer.box) == 0:
+            QMessageBox.warning(
+                self,
+                'Warning',
+                'Please load a dataset.'
+            )
+
             return
 
         self.dataloader.previous()
@@ -151,6 +180,9 @@ class Window(QMainWindow):
 
         for k, v in settings.items():
             if k in self.parameter.field:
+                if k == 'exclude':
+                    continue
+
                 if isinstance(self.parameter.field[k], tuple):
                     minimum, maximum = self.parameter.field[k]
                     mi, mx = v
@@ -168,39 +200,121 @@ class Window(QMainWindow):
         self.scrollable.canvas.clear()
         self.scrollable.canvas.exclude.update(exclude)
 
-    # def on_click_load(self) -> None:
-    #     path, _ = QFileDialog.getOpenFileName(
-    #         self,
-    #         'Open file',
-    #         filter='(*.wav)',
-    #         directory='E:/dataset/jedlikowski/132_white_browed_crake'
-    #     )
-
-    #     if not path:
-    #         return
-
-    #     signal = Signal(path)
-
-    #     settings = Settings.from_file(
-    #         'E:/code/personal/warbler.py/warbler.py/settings/spectrogram.json'
-    #     )
-
-    #     self.scrollable.canvas.cleanup()
-    #     self.scrollable.display(signal, settings)
-
     def on_click_load(self) -> None:
+        directory = (
+            self
+            .parser
+            .dataset
+            .joinpath('output/pickle')
+            .as_posix()
+        )
+
         path, _ = QFileDialog.getOpenFileName(
             self,
             'Open file',
             filter='Pickle (*.pickle *.pkl *.xz)',
-            directory='E:/code/personal/warbler.py/output/pickle/'
+            directory=directory
         )
 
         if not path:
+            QMessageBox.warning(
+                self,
+                'Warning',
+                'Please provide a valid path.'
+            )
+
             return
 
-        self.dataloader = Dataloader()
+        self.dataloader = Dataloader(self.parser)
         self.dataloader.open(path)
 
         filelist = self.dataloader.get_all()
         self.explorer.box.addItems(filelist)
+
+    def on_click_play(self) -> None:
+        if len(self.explorer.box) == 0:
+            QMessageBox.warning(
+                self,
+                'Warning',
+                'Please load a dataset.'
+            )
+
+            return
+
+        path = self.parser.dataset.joinpath(
+            self.dataloader.current.recording
+        )
+
+        startfile(path)
+
+    def on_click_reset_baseline(self) -> None:
+        if len(self.explorer.box) == 0:
+            QMessageBox.warning(
+                self,
+                'Warning',
+                'Please load a dataset.'
+            )
+
+            return
+
+        self.dataloader.baseline = True
+        settings = self.dataloader.settings()
+
+        self.parameter.update(settings)
+        self.dataloader.baseline = False
+
+        self.on_generate()
+
+    def on_click_reset_custom(self) -> None:
+        if len(self.explorer.box) == 0:
+            QMessageBox.warning(
+                self,
+                'Warning',
+                'Please load a dataset.'
+            )
+
+            return
+
+        settings = self.dataloader.settings()
+        self.parameter.update(settings)
+
+        self.on_generate()
+
+    def on_click_save(self) -> None:
+        settings = self.parameter.get()
+
+        if settings is None:
+            QMessageBox.warning(
+                self,
+                'Warning',
+                'A parameter field cannot be empty.'
+            )
+
+            return
+
+        settings['exclude'] = self.scrollable.canvas.exclude
+
+        default = self.dataloader.settings()
+        default.update(settings)
+
+        path = self.parser.dataset.joinpath(
+            self.dataloader.current.segmentation
+        )
+
+        default.save(path)
+
+    def on_click_settings(self) -> None:
+        if len(self.explorer.box) == 0:
+            QMessageBox.warning(
+                self,
+                'Warning',
+                'Please load a dataset.'
+            )
+
+            return
+
+        path = self.parser.dataset.joinpath(
+            self.dataloader.current.segmentation
+        )
+
+        startfile(path)
