@@ -13,14 +13,13 @@ def main() -> None:
     app = QApplication(sys.argv)
 
     window = Window()
-    window.resize(1600, 800)
     window.showNormal()
     window.setFocus()
 
     with open('gui/stylesheet.qss', 'r') as handle:
         stylesheet = handle.read()
 
-    app.setStyle('Fusion')
+    app.setStyle('fusion')
     app.setStyleSheet(stylesheet)
 
     handle = app.exec()

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import matplotlib.colors as mcolors
 
-from datatype.axes import SpectrogramAxes
 from gui.canvas import Canvas
 from datatype.segmentation import DynamicThresholdSegmentation
 from datatype.spectrogram import Linear, Spectrogram
@@ -95,6 +94,8 @@ class ScrollableWindow(QWidget):
                     event.inaxes.lines[index + 1].set_color(color)
 
                     event.canvas.draw()
+
+            print(self.canvas.exclude)
 
     def on_motion(self, event: MouseEvent) -> None:
         if hasattr(self, 'press') and self.press:
@@ -189,6 +190,8 @@ class ScrollableWindow(QWidget):
         onsets = algorithm.component.get('onset')
         offsets = algorithm.component.get('offset')
 
+        self.canvas.exclude.update(settings.exclude)
+
         x_minimum = 0
         x_maximum = signal.duration
         y_minimum = 0
@@ -215,7 +218,7 @@ class ScrollableWindow(QWidget):
 
         self.canvas.ax.initialize()
         self.canvas.ax._x_lim(x_maximum)
-        self.canvas.ax._y_lim(10000)
+        self.canvas.ax._y_lim(y_maximum)
         self.canvas.ax._x_step(x_maximum)
 
         ylmin, ylmax = self.canvas.ax.get_ylim()
@@ -255,20 +258,6 @@ class ScrollableWindow(QWidget):
             )
 
             rx, ry = rectangle.get_xy()
-
-            # cx = rx + rectangle.get_width() / 2.0
-            # cy = ry + rectangle.get_height() / 2.0
-
-            # self.canvas.ax.annotate(
-            #     index,
-            #     (cx, cy),
-            #     color='white',
-            #     weight=600,
-            #     fontfamily='Arial',
-            #     fontsize=8,
-            #     ha='center',
-            #     va='center'
-            # )
 
             self.canvas.ax.add_patch(rectangle)
 

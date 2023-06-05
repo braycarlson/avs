@@ -48,7 +48,7 @@ class Parameter(QWidget):
             'dereverberate',
             'mask_spec',
             'realtime',
-            'exclude'
+            # 'exclude'
         )
 
         grid = QGridLayout()
@@ -61,7 +61,7 @@ class Parameter(QWidget):
         rows = len(labels) // 3
 
         if len(labels) % 3 != 0:
-            rows += 1
+            rows = rows + 1
 
         for index, label in enumerate(labels, 0):
             row = index % rows
