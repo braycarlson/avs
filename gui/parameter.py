@@ -48,7 +48,6 @@ class Parameter(QWidget):
             'dereverberate',
             'mask_spec',
             'realtime',
-            # 'exclude'
         )
 
         grid = QGridLayout()
@@ -66,10 +65,6 @@ class Parameter(QWidget):
         for index, label in enumerate(labels, 0):
             row = index % rows
             column = index // rows
-
-            if label == 'exclude':
-                self.field[label] = []
-                continue
 
             if label == 'spectral_range':
                 qlabel = QLabel(label)
@@ -118,9 +113,6 @@ class Parameter(QWidget):
         parameters = {}
 
         for key, value in self.field.items():
-            if key == 'exclude':
-                continue
-
             if isinstance(value, tuple):
                 x, y = value
                 x, y = x.text(), y.text()
@@ -140,7 +132,7 @@ class Parameter(QWidget):
 
     def update(self, settings: dict[str, Any]) -> None:
         for key, value in settings.__dict__.items():
-            if key not in self.field or key == 'exclude':
+            if key not in self.field:
                 continue
 
             element = self.field[key]

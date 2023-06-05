@@ -95,8 +95,6 @@ class ScrollableWindow(QWidget):
 
                     event.canvas.draw()
 
-            print(self.canvas.exclude)
-
     def on_motion(self, event: MouseEvent) -> None:
         if hasattr(self, 'press') and self.press:
             x, _ = self.press
