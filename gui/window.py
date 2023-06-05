@@ -33,6 +33,7 @@ class Window(QMainWindow):
         self.setWindowIcon(self.icon)
 
         self.move(100, 100)
+        self.resize(1600, 800)
 
         self.parser = Parser()
         self.dataframe = None
@@ -52,7 +53,7 @@ class Window(QMainWindow):
         self.ax = self.figure.add_subplot(
             111,
             autoscale_on=True,
-            projection='spectrogram'
+            projection='linear'
         )
 
         self.scrollable = ScrollableWindow(self.figure, self.ax)
@@ -104,6 +105,43 @@ class Window(QMainWindow):
         self.menu.save.connect(self.on_click_save)
         self.menu.exit.connect(QApplication.quit)
 
+    def create(self) -> None:
+        if len(self.explorer.box) == 0:
+            QMessageBox.warning(
+                self,
+                'Warning',
+                'Please load a dataset.'
+            )
+
+            return
+
+        index = self.explorer.box.currentText()
+        self.dataloader.update(index)
+
+        self.scrollable.canvas.cleanup()
+
+        parameters = self.parameter.get()
+        settings = Settings.from_dict(parameters)
+
+        exclude = (
+            self
+            .dataloader
+            .current
+            .settings
+            .exclude
+        )
+
+        if self.dataloader.baseline:
+            exclude = []
+
+        self.scrollable.canvas.clear()
+        settings['exclude'] = exclude
+
+        self.scrollable.display(
+            self.dataloader.current.signal,
+            settings
+        )
+
     def on_generate(self) -> None:
         if len(self.explorer.box) == 0:
             QMessageBox.warning(
@@ -122,13 +160,8 @@ class Window(QMainWindow):
         parameters = self.parameter.get()
         settings = Settings.from_dict(parameters)
 
-        settings['exclude'] = (
-            self
-            .dataloader
-            .current
-            .settings
-            .exclude
-        )
+        self.scrollable.canvas.clear()
+        settings['exclude'] = []
 
         self.scrollable.display(
             self.dataloader.current.signal,
@@ -167,6 +200,7 @@ class Window(QMainWindow):
 
         self.update()
 
+        self.scrollable.canvas.clear()
         self.scrollable.canvas.cleanup()
 
         self.scrollable.display(
@@ -197,7 +231,6 @@ class Window(QMainWindow):
         exclude = settings.get('exclude')
         exclude = set(exclude)
 
-        self.scrollable.canvas.clear()
         self.scrollable.canvas.exclude.update(exclude)
 
     def on_click_load(self) -> None:
@@ -258,12 +291,11 @@ class Window(QMainWindow):
             return
 
         self.dataloader.baseline = True
+
         settings = self.dataloader.settings()
-
         self.parameter.update(settings)
-        self.dataloader.baseline = False
 
-        self.on_generate()
+        self.create()
 
     def on_click_reset_custom(self) -> None:
         if len(self.explorer.box) == 0:
@@ -275,10 +307,12 @@ class Window(QMainWindow):
 
             return
 
+        self.dataloader.baseline = False
+
         settings = self.dataloader.settings()
         self.parameter.update(settings)
 
-        self.on_generate()
+        self.create()
 
     def on_click_save(self) -> None:
         settings = self.parameter.get()

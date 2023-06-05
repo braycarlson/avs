@@ -3,7 +3,6 @@ from __future__ import annotations
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 
-from datatype.axes import SpectrogramAxes
 from PyQt6.QtWidgets import QSizePolicy
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from typing import TYPE_CHECKING
