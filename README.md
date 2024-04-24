@@ -8,7 +8,7 @@ Animal Vocalization Segmentation (AVS) is a GUI tool to provide manual intervent
 
 ## Prerequisites
 
-* [pyenv](https://github.com/pyenv/pyenv) or [Python 3.11.2](https://www.python.org/downloads/)
+* [Python 3.11.2](https://www.python.org/downloads/)
 
 ## Setup
 

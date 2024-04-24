@@ -19,5 +19,5 @@ SETTINGS = PACKAGE.joinpath('settings')
 # The directory for warbler
 WARBLER = Path('E:/code/personal/warbler/')
 
-# The directory for pickled recordings
-PICKLE = WARBLER.joinpath('output/pickle')
+# The directory for recordings
+PARQUET = WARBLER.joinpath('output/parquet')
