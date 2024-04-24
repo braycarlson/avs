@@ -6,10 +6,10 @@ import pyarrow.parquet as pq
 import shutil
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
-from constant import PICKLE
+from constant import PARQUET
 from datatype.settings import Settings
 from datatype.signal import Signal
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -28,7 +28,7 @@ class DatasetStrategy(ABC):
 
     @property
     def path(self) -> Path:
-        return PICKLE.joinpath(self.filename + self.extension)
+        return PARQUET.joinpath(self.filename + self.extension)
 
     @abstractmethod
     def load(self) -> pd.DataFrame:
@@ -62,6 +62,10 @@ class ParquetStrategy(DatasetStrategy):
 
         for column in self.columns:
             if column in dataframe.columns:
+                dataframe[column + '_shape'] = dataframe[column].apply(
+                    lambda x: x.shape
+                )
+
                 dataframe[column] = dataframe[column].apply(
                     lambda x: x.ravel().tolist()
                 )
@@ -75,9 +79,15 @@ class ParquetStrategy(DatasetStrategy):
 
         for column in self.columns:
             if column in dataframe.columns:
-                dataframe[column] = dataframe[column].apply(
-                    lambda x: np.array(x)
-                )
+                shape = column + '_shape'
+
+                if shape in dataframe.columns:
+                    dataframe[column] = dataframe.apply(
+                        lambda row,
+                        column=column,
+                        shape=shape: np.array(row[column]).reshape(row[shape]),
+                        axis=1
+                    )
 
         return dataframe
 

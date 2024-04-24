@@ -286,7 +286,7 @@ class Window(QMainWindow):
             self
             .parser
             .dataset
-            .joinpath('output/pickle')
+            .joinpath('output/parquet')
             .as_posix()
         )
 
