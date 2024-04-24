@@ -16,8 +16,8 @@ PACKAGE = CWD.joinpath('avs')
 # The file for all parameter settings
 SETTINGS = PACKAGE.joinpath('settings')
 
-# The directory for warbler.py
-WARBLER = Path('E:/code/personal/warbler.py/')
+# The directory for warbler
+WARBLER = Path('E:/code/personal/warbler/')
 
 # The directory for pickled recordings
 PICKLE = WARBLER.joinpath('output/pickle')

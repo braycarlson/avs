@@ -9,4 +9,5 @@ platformdirs
 PyQt6
 scipy
 seaborn
+tables
 tensorflow

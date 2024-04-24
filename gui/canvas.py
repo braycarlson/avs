@@ -31,8 +31,8 @@ class Canvas(FigureCanvasQTAgg):
         self.figure.patch.set_facecolor('#222222')
         self.ax.patch.set_facecolor('#222222')
 
-        self.blue = mcolors.to_rgba('#0079d3', alpha=0.75)
-        self.red = mcolors.to_rgba('#d1193e', alpha=0.75)
+        self.unselected = mcolors.to_rgba('#0079d3', alpha=0.75)
+        self.selected = mcolors.to_rgba('#d1193e', alpha=0.75)
 
         self.ax.xaxis.label.set_color('white')
         self.ax.yaxis.label.set_color('white')
@@ -69,3 +69,27 @@ class Canvas(FigureCanvasQTAgg):
 
     def clear(self) -> None:
         self.exclude.clear()
+
+    def apply(self, theme: dict[str, str]) -> None:
+        self.figure.patch.set_facecolor(theme["base"].name())
+        self.ax.patch.set_facecolor(theme["surface"].name())
+
+        self.ax.xaxis.label.set_color(theme["text"].name())
+        self.ax.yaxis.label.set_color(theme["text"].name())
+
+        self.ax.tick_params(axis='x', colors=theme["text"].name())
+        self.ax.tick_params(axis='y', colors=theme["text"].name())
+
+        self.unselected = mcolors.to_rgba(theme["link"].name(), alpha=0.75)
+        self.selected = mcolors.to_rgba(theme["highlight"].name(), alpha=0.75)
+
+        for text in self.ax.texts:
+            text.set_color(theme["text"].name())
+
+        for patch in self.ax.patches:
+            patch.set_facecolor(theme["highlight"].name())
+
+        for line in self.ax.lines:
+            line.set_color(theme["link"].name())
+
+        self.draw_idle()

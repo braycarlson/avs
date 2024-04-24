@@ -1,185 +1,176 @@
-"""
-Dataset
--------
-
-"""
-
 from __future__ import annotations
 
-import lzma
-import pickle
+import numpy as np
+import pyarrow as pa
+import pyarrow.parquet as pq
 import shutil
 
 from abc import ABC, abstractmethod
-from constant import PICKLE
 from typing import TYPE_CHECKING
+from constant import PICKLE
+from datatype.settings import Settings
+from datatype.signal import Signal
 
 if TYPE_CHECKING:
     import pandas as pd
-    import pathlib
+
+    from pathlib import Path
 
 
-class PicklingStrategy(ABC):
-    """Abstract base class for pickling strategies."""
-
+class DatasetStrategy(ABC):
     def __init__(self, filename: str = 'dataframe'):
         self.filename = filename
         self.extension = None
 
+    @abstractmethod
+    def chunk(self, chunksize: int) -> pd.DataFrame:
+        raise NotImplementedError
+
     @property
-    def path(self) -> pathlib.Path:
-        """Get the full path of the pickle file.
-
-        Returns:
-            The full path of the pickle file.
-
-        """
-
+    def path(self) -> Path:
         return PICKLE.joinpath(self.filename + self.extension)
 
     @abstractmethod
     def load(self) -> pd.DataFrame:
-        """Load the data from the pickle file."""
-
         raise NotImplementedError
 
     @abstractmethod
     def save(self, dataframe: pd.DataFrame) -> None:
-        """Save the data to the pickle file.
-
-        Args:
-            dataframe: The DataFrame to be saved.
-
-        """
-
         raise NotImplementedError
 
 
-class Compressed(PicklingStrategy):
-    """A pickling strategy that compresses the data using lzma."""
-
-    def __init__(self, filename: str):
+class ParquetStrategy(DatasetStrategy):
+    def __init__(self, filename: str, chunksize: int = 50):
+        self.columns = [
+            'scale',
+            'spectrogram',
+            'original_array',
+            'filter_array',
+        ]
+        self.chunksize = chunksize
         self.filename = filename
-        self.extension = '.xz'
+        self.extension = '.parquet'
+        self.start = 0
+        self.buffer = None
+
+    def _serialize(self, dataframe: pd.DataFrame) -> pd.DataFrame:
+        for column in ['segment', 'signal']:
+            if column in dataframe.columns:
+                dataframe[column] = dataframe[column].apply(
+                    lambda x: x.serialize()
+                )
+
+        for column in self.columns:
+            if column in dataframe.columns:
+                dataframe[column] = dataframe[column].apply(
+                    lambda x: x.ravel().tolist()
+                )
+
+        return dataframe
+
+    def _deserialize(self, dataframe: pd.DataFrame) -> pd.DataFrame:
+        for column in ['segment', 'signal']:
+            if column in dataframe.columns:
+                dataframe[column] = dataframe[column].apply(Signal.deserialize)
+
+        for column in self.columns:
+            if column in dataframe.columns:
+                dataframe[column] = dataframe[column].apply(
+                    lambda x: np.array(x)
+                )
+
+        return dataframe
+
+    def chunk(self) -> pd.DataFrame:
+        file = pq.ParquetFile(self.path)
+        length = file.num_row_groups
+
+        for index in range(length):
+            yield file.read_row_group(index).to_pandas()
+
+    def get(self, index: int) -> pd.Series:
+        if index < self.start or index >= self.start + self.chunksize:
+            self.load_buffer(index)
+
+        local = index - self.start
+        return self.buffer.iloc[local]
+
+    def get_column(self, name: str) -> list[str]:
+        table = pq.read_table(self.path, columns=[name])
+        dataframe = table.to_pandas()
+        return dataframe[name].tolist()
 
     def load(self) -> pd.DataFrame:
-        """Load the data from the compressed pickle file.
+        dataframe = pq.read_table(self.path).to_pandas()
+        return self._deserialize(dataframe)
 
-        Returns:
-            The loaded DataFrame.
+    def load_buffer(self, index: int) -> None:
+        file = pq.ParquetFile(self.path)
 
-        """
+        length = file.num_row_groups
+        start = index // self.chunksize
+        stop = (index + self.chunksize) // self.chunksize
 
-        if not self.path.is_file():
-            return self.path.touch()
+        if start < length:
+            partition = range(
+                start,
+                min(stop, length)
+            )
 
-        with lzma.open(self.path, 'rb') as handle:
-            return pickle.load(handle)
+            buffer = file.read_row_groups(partition).to_pandas()
+            self.buffer = self._deserialize(buffer)
 
-    def save(self, dataframe: pd.DataFrame) -> None:
-        """Save the data to the compressed pickle file.
+            self.buffer['settings'] = (
+                self.buffer['segmentation']
+                .apply(Settings.resolve)
+            )
 
-        Args:
-            dataframe: The DataFrame to be saved.
-
-        """
-
-        with lzma.open(self.path, 'wb') as handle:
-            pickle.dump(dataframe, handle)
-
-
-class Uncompressed(PicklingStrategy):
-    """A pickling strategy that saves the data without compression."""
-
-    def __init__(self, filename: str):
-        self.filename = filename
-        self.extension = '.pkl'
-
-    def load(self) -> pd.DataFrame:
-        """Load the data from the uncompressed pickle file.
-
-        Returns:
-            The loaded DataFrame.
-
-        """
-
-        if not self.path.is_file():
-            return self.path.touch()
-
-        with open(self.path, 'rb') as handle:
-            return pickle.load(handle)
+            self.start = start * self.chunksize
+        else:
+            message = 'Start index is out of bounds.'
+            raise IndexError(message)
 
     def save(self, dataframe: pd.DataFrame) -> None:
-        """Save the data to the uncompressed pickle file.
+        if 'settings' in dataframe.columns:
+            drop = ['settings']
+            dataframe = dataframe.drop(drop, axis=1)
 
-        Args:
-            dataframe: The DataFrame to be saved.
+        dataframe = self._serialize(dataframe)
+        table = pa.Table.from_pandas(dataframe)
 
-        """
+        pq.write_table(
+            table,
+            self.path,
+            row_group_size=self.chunksize
+        )
 
-        with open(self.path, 'wb') as handle:
-            pickle.dump(dataframe, handle)
 
-
-class Dataset():
-    """A dataset class for managing pickled data."""
-
+class Dataset:
     def __init__(self, filename: str):
-        self._strategy = Uncompressed(filename)
+        self.strategy = ParquetStrategy(filename)
 
     @property
-    def path(self) -> pathlib.Path:
-        """Get the path of the dataset.
-
-        Returns:
-            The path of the dataset.
-
-        """
-
+    def path(self) -> Path:
         return self.strategy.path
 
-    @property
-    def strategy(self) -> PicklingStrategy:
-        """Get the pickling strategy.
+    def chunk(self, chunksize: int) -> pd.DataFrame:
+        return self.strategy.chunk(chunksize)
 
-        Returns:
-            The current pickling strategy.
-
-        """
-
-        return self._strategy
-
-    @strategy.setter
-    def strategy(self, strategy: PicklingStrategy) -> None:
-        self._strategy = strategy
+    def get(self, index: int) -> pd.Series:
+        return self.strategy.get(index)
 
     def duplicate(self, filename: str) -> None:
-        """Duplicate the dataset.
-
-        Args:
-            filename: The filename of the duplicated dataset.
-
-        """
-
         path = self.path.parent.joinpath(filename)
         shutil.copyfile(self.path, path)
 
+    def get_column(self, name: str) -> list[str]:
+        return self.strategy.get_column(name)
+
     def load(self) -> pd.DataFrame:
-        """Load the dataset.
-
-        Returns:
-            The loaded DataFrame.
-
-        """
-
         return self.strategy.load()
 
+    def load_buffer(self, index: int) -> None:
+        return self.strategy.load_buffer(index)
+
     def save(self, dataframe: pd.DataFrame) -> None:
-        """Save the dataset.
-
-        Args:
-            dataframe: The DataFrame to be saved.
-
-        """
-
         self.strategy.save(dataframe)

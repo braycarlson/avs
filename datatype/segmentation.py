@@ -1,9 +1,3 @@
-"""
-Segmentation
-------------
-
-"""
-
 from __future__ import annotations
 
 import numpy as np
@@ -27,16 +21,6 @@ class DynamicThresholdSegmentation:
         self.signal = signal
 
     def _calculate_onset_offset(self, signal: npt.NDArray) -> npt.NDArray:
-        """Calculates the onsets and offsets of a signal.
-
-        Args:
-            signal: The input signal.
-
-        Returns:
-            An array containing the onsets and offsets.
-
-        """
-
         signal = signal > self.settings.silence_threshold
         elements, nelements = ndimage.label(signal)
 
@@ -59,16 +43,6 @@ class DynamicThresholdSegmentation:
         return np.array([onset, offset])
 
     def start(self) -> dict[str, Any]:
-        """Performs dynamic threshold segmentation on a signal.
-
-        Args:
-            None.
-
-        Returns:
-            A dictionary containing the segmented template.
-
-        """
-
         # Make a copy of the original spectrogram
         segment = Segment(self.signal, self.settings)
 

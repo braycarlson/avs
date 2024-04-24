@@ -1,26 +1,32 @@
 from __future__ import annotations
 
-from datatype.dataloader import Dataloader
+from datatype.axes import LinearAxes
 from datatype.parser import Parser
 from datatype.settings import Settings
 from gui.explorer import FileExplorer
 from gui.menubar import Menubar
 from gui.scroll import ScrollableWindow
 from gui.parameter import Parameter
+from gui.worker import Worker
 from matplotlib.figure import Figure
 from os import startfile
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QIcon
+from PyQt6.QtCore import Qt, QThread, QTimer
+from PyQt6.QtGui import QIcon, QPalette
 from PyQt6.QtWidgets import (
     QApplication,
     QMainWindow,
     QMessageBox,
     QHBoxLayout,
     QVBoxLayout,
+    QProgressDialog,
     QPushButton,
     QFileDialog,
     QWidget
 )
+from typing_extensions import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from datatype.dataloader import Dataloader
 
 
 class Window(QMainWindow):
@@ -35,8 +41,26 @@ class Window(QMainWindow):
         self.move(100, 100)
         self.resize(1600, 800)
 
+        self.progress = QProgressDialog(
+            'Loading file..',
+            'Cancel',
+            0,
+            100,
+            self
+        )
+
+        self.progress.setWindowModality(Qt.WindowModality.WindowModal)
+        self.progress.setWindowTitle('avs')
+        self.progress.setCancelButton(None)
+        self.progress.findChild(QTimer).stop()
+        self.progress.setRange(0, 0)
+        self.progress.resize(300, 75)
+        self.progress.hide()
+
         self.parser = Parser()
         self.dataframe = None
+
+        self.theme = None
 
         self.widget = QWidget()
         self.setCentralWidget(self.widget)
@@ -98,6 +122,7 @@ class Window(QMainWindow):
         self.previous.clicked.connect(self.on_previous)
         self.explorer.box.currentIndexChanged.connect(self.on_file_change)
         self.explorer.button.clicked.connect(self.on_click_load)
+        self.menu.theme.connect(self.apply)
         self.menu.play.connect(self.on_click_play)
         self.menu.reset_to_baseline.connect(self.on_click_reset_baseline)
         self.menu.reset_to_custom.connect(self.on_click_reset_custom)
@@ -178,8 +203,14 @@ class Window(QMainWindow):
 
             return
 
+        self.explorer.box.currentIndexChanged.disconnect(self.on_file_change)
+
         self.dataloader.next()
         self.explorer.box.setCurrentIndex(self.dataloader.index)
+
+        self.explorer.box.currentIndexChanged.connect(self.on_file_change)
+
+        self.refresh()
 
     def on_previous(self) -> None:
         if len(self.explorer.box) == 0:
@@ -191,8 +222,14 @@ class Window(QMainWindow):
 
             return
 
+        self.explorer.box.currentIndexChanged.disconnect(self.on_file_change)
+
         self.dataloader.previous()
         self.explorer.box.setCurrentIndex(self.dataloader.index)
+
+        self.explorer.box.currentIndexChanged.connect(self.on_file_change)
+
+        self.refresh()
 
     def on_file_change(self) -> None:
         index = self.explorer.box.currentText()
@@ -200,6 +237,17 @@ class Window(QMainWindow):
 
         self.update()
 
+        self.scrollable.canvas.clear()
+        self.scrollable.canvas.cleanup()
+
+        self.scrollable.display(
+            self.dataloader.current.signal,
+            self.dataloader.current.settings
+        )
+
+        self.refresh()
+
+    def refresh(self) -> None:
         self.scrollable.canvas.clear()
         self.scrollable.canvas.cleanup()
 
@@ -245,24 +293,61 @@ class Window(QMainWindow):
         path, _ = QFileDialog.getOpenFileName(
             self,
             'Open file',
-            filter='Pickle (*.pickle *.pkl *.xz)',
+            filter='Dataset (*parquet)',
             directory=directory
         )
 
-        if not path:
-            QMessageBox.warning(
-                self,
-                'Warning',
-                'Please provide a valid path.'
-            )
-
+        if path == '':
             return
 
-        self.dataloader = Dataloader(self.parser)
-        self.dataloader.open(path)
+        if path != '' or path != ' ':
+            self.progress.show()
+
+            self.thread = QThread()
+            self.worker = Worker(self.parser, path)
+            self.worker.moveToThread(self.thread)
+
+            self.thread.started.connect(self.worker.run)
+            self.worker.finished.connect(self.on_file_load)
+            self.worker.error.connect(self.on_load_error)
+            self.worker.finished.connect(self.thread.quit)
+            self.worker.finished.connect(self.worker.deleteLater)
+            self.thread.finished.connect(self.thread.deleteLater)
+            self.thread.finished.connect(self.progress.reset)
+
+            self.thread.start()
+
+    def on_file_load(self, dataloader: Dataloader) -> None:
+        self.progress.reset()
+
+        self.dataloader = dataloader
 
         filelist = self.dataloader.get_all()
+        length = len(filelist)
+
+        self.dataloader.filelist = filelist
+        self.dataloader.length = length
+
+        self.explorer.box.currentIndexChanged.disconnect(self.on_file_change)
+
+        self.explorer.box.clear()
         self.explorer.box.addItems(filelist)
+
+        if filelist:
+            self.explorer.box.setCurrentIndex(0)
+
+        self.explorer.box.currentIndexChanged.connect(self.on_file_change)
+
+        self.on_file_change()
+
+    def on_load_error(self, message: str) -> None:
+        self.progress.reset()
+
+        QMessageBox.critical(
+            self,
+            'Error',
+            f'Failed to load file: {message}'
+        )
 
     def on_click_play(self) -> None:
         if len(self.explorer.box) == 0:
@@ -326,7 +411,7 @@ class Window(QMainWindow):
 
             return
 
-        settings['exclude'] = self.scrollable.canvas.exclude
+        settings['exclude'] = list(self.scrollable.canvas.exclude)
 
         default = self.dataloader.settings()
         default.update(settings)
@@ -336,6 +421,8 @@ class Window(QMainWindow):
         )
 
         default.save(path)
+
+        self.dataloader.reload()
 
     def on_click_settings(self) -> None:
         if len(self.explorer.box) == 0:
@@ -352,3 +439,128 @@ class Window(QMainWindow):
         )
 
         startfile(path)
+
+    def apply(
+        self,
+        theme: dict[str, str]
+    ) -> None:
+        self.theme = theme
+
+        palette = QPalette()
+
+        palette.setColor(
+            QPalette.ColorRole.Window,
+            theme['base']
+        )
+
+        palette.setColor(
+            QPalette.ColorRole.WindowText,
+            theme['text']
+        )
+
+        palette.setColor(
+            QPalette.ColorRole.Base,
+            theme['surface']
+        )
+
+        palette.setColor(
+            QPalette.ColorRole.AlternateBase,
+            theme['overlay']
+        )
+
+        palette.setColor(
+            QPalette.ColorRole.ToolTipBase,
+            theme['base']
+        )
+
+        palette.setColor(
+            QPalette.ColorRole.ToolTipText,
+            theme['text']
+        )
+
+        palette.setColor(
+            QPalette.ColorRole.Text,
+            theme['text']
+        )
+
+        palette.setColor(
+            QPalette.ColorRole.Button,
+            theme['base']
+        )
+
+        palette.setColor(
+            QPalette.ColorRole.ButtonText,
+            theme['text']
+        )
+
+        palette.setColor(
+            QPalette.ColorRole.BrightText,
+            theme['brightText']
+        )
+
+        palette.setColor(
+            QPalette.ColorRole.Link,
+            theme['link']
+        )
+
+        palette.setColor(
+            QPalette.ColorRole.Highlight,
+            theme['highlight']
+        )
+
+        palette.setColor(
+            QPalette.ColorRole.HighlightedText,
+            theme['highlightedText']
+        )
+
+        palette.setColor(
+            QPalette.ColorGroup.Disabled,
+            QPalette.ColorRole.WindowText,
+            theme['disabledWindowText']
+        )
+
+        palette.setColor(
+            QPalette.ColorGroup.Disabled,
+            QPalette.ColorRole.Button,
+            theme['base']
+        )
+
+        palette.setColor(
+            QPalette.ColorGroup.Disabled,
+            QPalette.ColorRole.ButtonText,
+            theme['disabledButtonText']
+        )
+
+        palette.setColor(
+            QPalette.ColorGroup.Disabled,
+            QPalette.ColorRole.Text,
+            theme['disabledText']
+        )
+
+        palette.setColor(
+            QPalette.ColorGroup.Disabled,
+            QPalette.ColorRole.Base,
+            theme['surface']
+        )
+
+        palette.setColor(
+            QPalette.ColorGroup.Disabled,
+            QPalette.ColorRole.Highlight,
+            theme['disabledHighlight']
+        )
+
+        palette.setColor(
+            QPalette.ColorGroup.Disabled,
+            QPalette.ColorRole.HighlightedText,
+            theme['highlightedText']
+        )
+
+        app = QApplication.instance()
+        app.setPalette(palette)
+
+        widgets = app.allWidgets()
+
+        for widget in widgets:
+            widget.setPalette(palette)
+
+        self.scrollable.apply(theme)

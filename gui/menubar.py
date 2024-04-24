@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from gui.about import About
+from gui.palette import MAPPING
 from gui.preferences import Preferences
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QAction
@@ -22,6 +23,9 @@ class Menubar(QMenuBar):
     reset_to_baseline = pyqtSignal()
     reset_to_custom = pyqtSignal()
     preferences = pyqtSignal()
+
+    # Themes
+    theme = pyqtSignal(dict)
 
     def __init__(self, parser: Parser = None):
         super().__init__()
@@ -66,6 +70,41 @@ class Menubar(QMenuBar):
         options.addAction(reset_to_custom)
         options.addAction(preferences)
 
+        # Theme
+        themes = self.addMenu('&Themes')
+
+        brackets = QAction('Brackets', parent=self)
+        dracula = QAction('Dracula', parent=self)
+        gruvbox = QAction('Gruvbox', parent=self)
+        onedark = QAction('One Dark', parent=self)
+        rosepine = QAction('Rose Pine', parent=self)
+
+        brackets.triggered.connect(
+            lambda: self.on_change_theme('brackets')
+        )
+
+        gruvbox.triggered.connect(
+            lambda: self.on_change_theme('gruvbox')
+        )
+
+        dracula.triggered.connect(
+            lambda: self.on_change_theme('dracula')
+        )
+
+        onedark.triggered.connect(
+            lambda: self.on_change_theme('onedark')
+        )
+
+        rosepine.triggered.connect(
+            lambda: self.on_change_theme('rosepine')
+        )
+
+        themes.addAction(brackets)
+        themes.addAction(dracula)
+        themes.addAction(gruvbox)
+        themes.addAction(onedark)
+        themes.addAction(rosepine)
+
         # Help
         help = self.addMenu("&Help")
 
@@ -75,6 +114,11 @@ class Menubar(QMenuBar):
         about.triggered.connect(self.on_click_about)
 
         help.addAction(about)
+
+    def on_change_theme(self, name: str) -> None:
+        if name in MAPPING:
+            theme = MAPPING[name]
+            self.theme.emit(theme)
 
     def on_click_about(self) -> None:
         if self.about is not None:

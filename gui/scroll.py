@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import matplotlib.colors as mcolors
-
 from gui.canvas import Canvas
 from datatype.segmentation import DynamicThresholdSegmentation
 from datatype.spectrogram import Linear, Spectrogram
@@ -76,17 +74,14 @@ class ScrollableWindow(QWidget):
                     label = patch.get_label()
                     label = int(label)
 
-                    blue = mcolors.to_rgba('#0079d3', alpha=0.75)
-                    red = mcolors.to_rgba('#d1193e', alpha=0.75)
-
                     facecolor = patch.get_facecolor()
                     index = label * 2
 
-                    if facecolor == red:
-                        color = blue
+                    if facecolor == self.canvas.selected:
+                        color = self.canvas.unselected
                         self.canvas.exclude.remove(label)
                     else:
-                        color = red
+                        color = self.canvas.selected
                         self.canvas.exclude.add(label)
 
                     patch.set_color(color)
@@ -174,15 +169,19 @@ class ScrollableWindow(QWidget):
         self.scroll.verticalScrollBar().setValue(sy)
 
     def display(self, signal: Signal, settings: Settings) -> None:
-        spectrogram = Spectrogram()
-        strategy = Linear(signal, settings)
-        spectrogram.strategy = strategy
+        strategy = Linear(
+            signal=signal,
+            settings=settings
+        )
 
+        spectrogram = Spectrogram(strategy=strategy)
         spectrogram = spectrogram.generate()
 
-        algorithm = DynamicThresholdSegmentation()
-        algorithm.signal = signal
-        algorithm.settings = settings
+        algorithm = DynamicThresholdSegmentation(
+            signal=signal,
+            settings=settings
+        )
+
         algorithm.start()
 
         onsets = algorithm.component.get('onset')
@@ -208,7 +207,7 @@ class ScrollableWindow(QWidget):
         self.canvas.image = self.canvas.ax.matshow(
             spectrogram,
             aspect='auto',
-            cmap='inferno',
+            cmap='bone',
             extent=extent,
             interpolation=None,
             origin='lower'
@@ -225,9 +224,9 @@ class ScrollableWindow(QWidget):
 
         for index, (onset, offset) in enumerate(zip(onsets, offsets), 0):
             color = (
-                self.canvas.red
+                self.canvas.selected
                 if index in settings.exclude
-                else self.canvas.blue
+                else self.canvas.unselected
             )
 
             self.canvas.ax.axvline(
@@ -276,3 +275,32 @@ class ScrollableWindow(QWidget):
             )
 
         self.canvas.draw()
+
+    def apply(
+        self,
+        theme: dict[str, str]
+    ) -> None:
+        palette = self.palette()
+        palette.setColor(self.backgroundRole(), theme["base"])
+        palette.setColor(self.foregroundRole(), theme["text"])
+        self.setPalette(palette)
+
+        self.scroll.setStyleSheet(f"background-color: {theme['surface'].name()};")
+        self.canvas.setStyleSheet(f"background-color: {theme['overlay'].name()}; color: {theme['text'].name()};")
+
+        self.canvas.figure.set_facecolor(theme["base"].name())
+        self.canvas.ax.set_facecolor(theme["surface"].name())
+
+        self.canvas.ax.tick_params(colors=theme["text"].name(), which='both')
+        self.canvas.ax.xaxis.label.set_color(theme["text"].name())
+        self.canvas.ax.yaxis.label.set_color(theme["text"].name())
+        self.canvas.ax.title.set_color(theme["text"].name())
+
+        for line in self.canvas.ax.lines:
+            line.set_color(theme["link"].name())
+
+        for patch in self.canvas.ax.patches:
+            patch.set_edgecolor(theme["highlight"].name())
+
+        self.canvas.apply(theme)
+        self.canvas.draw_idle()
