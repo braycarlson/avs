@@ -2,6 +2,7 @@ import matplotlib as mpl
 import os
 import sys
 
+from gui.palette import rosepine
 from gui.window import Window
 from PyQt6.QtWidgets import QApplication
 
@@ -14,13 +15,16 @@ def main() -> None:
 
     window = Window()
     window.showNormal()
-    window.setFocus()
+    window.apply(rosepine)
 
     with open('gui/stylesheet.qss', 'r') as handle:
         stylesheet = handle.read()
 
-    app.setStyle('fusion')
     app.setStyleSheet(stylesheet)
+    app.setStyle('fusion')
+
+    window.activateWindow()
+    window.setFocus()
 
     handle = app.exec()
     sys.exit(handle)

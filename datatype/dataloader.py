@@ -1,9 +1,3 @@
-"""
-Dataloader
-----------
-
-"""
-
 from __future__ import annotations
 
 from datatype.dataset import Dataset
@@ -24,6 +18,7 @@ class Dataloader:
         self.baseline = False
         self.current = None
         self.dataframe = None
+        self.dataset = None
         self.filelist = None
         self.parser = parser
         self.realtime = False
@@ -39,17 +34,13 @@ class Dataloader:
         return False
 
     def get_all(self) -> list[str]:
-        return self.dataframe.filename.to_list()
+        return self.dataset.get_column('filename')
 
     def open(self, path: str | Path) -> None:
         filename = Path(path).stem
 
-        dataset = Dataset(filename)
-        self.dataframe = dataset.load()
-
-        self.current = self.dataframe.iloc[self.index]
-        self.length = len(self.dataframe)
-        self.filelist = self.get_all()
+        self.dataset = Dataset(filename)
+        self.dataset.load_buffer(self.index)
 
     def next(self) -> None:
         if self.index == self.length - 1:
@@ -57,7 +48,7 @@ class Dataloader:
         else:
             self.index = self.index + 1
 
-        self.current = self.dataframe.iloc[self.index]
+        self.current = self.dataset.get(self.index)
 
     def previous(self) -> None:
         if self.index == 0:
@@ -65,7 +56,7 @@ class Dataloader:
         else:
             self.index = self.index - 1
 
-        self.current = self.dataframe.iloc[self.index]
+        self.current = self.dataset.get(self.index)
 
     def settings(self) -> Settings:
         if self.baseline:
@@ -125,7 +116,7 @@ class Dataloader:
             if settings.reduce_noise:
                 callback['reduce'] = partial(signal.reduce)
 
-            # The order should match the warbler.py pipeline
+            # The order should match the warbler pipeline
             path = self.parser.settings.joinpath('order.json')
             order = Settings.from_file(path)
 
@@ -144,8 +135,9 @@ class Dataloader:
 
         return signal
 
-    def update(self, filename: str) -> None:
-        data = self.get_all()
+    def reload(self) -> None:
+        self.dataframe = self.dataset.load_buffer(self.index)
 
-        self.index = data.index(filename)
-        self.current = self.dataframe.iloc[self.index]
+    def update(self, filename: str) -> None:
+        self.index = self.filelist.index(filename)
+        self.current = self.dataset.get(self.index)

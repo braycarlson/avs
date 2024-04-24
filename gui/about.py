@@ -17,7 +17,7 @@ class About(Floating):
 
         author = QLabel('Samantha Huang & Brayden Carlson')
         license = QLabel('GPL v3')
-        copyright = QLabel('Copyright © 2023')
+        copyright = QLabel('Copyright © 2024')
 
         self.layout.addWidget(author)
         self.layout.addWidget(license)

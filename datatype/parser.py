@@ -1,9 +1,3 @@
-"""
-Parser
-------
-
-"""
-
 from __future__ import annotations
 
 from configparser import ConfigParser
@@ -18,6 +12,7 @@ if TYPE_CHECKING:
 class Parser(ConfigParser):
     def __init__(self):
         super().__init__()
+
         self._initialize()
 
     @property
