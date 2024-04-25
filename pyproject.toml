@@ -1,6 +1,6 @@
 [project]
 name = "Animal Vocalization Segmentation"
-description = "Animal Vocalization Segmentation (AVS) is a GUI tool to provide manual intervention during vocalization segmentation. It is to be used in conjunction with warbler.py."
+description = "Animal Vocalization Segmentation (avs) is a GUI tool to provide manual intervention during vocalization segmentation. It is to be used in conjunction with warbler."
 version = "1.0"
 authors = [
     { name = "Samantha Huang", email = "huang5@uleth.ca" },
