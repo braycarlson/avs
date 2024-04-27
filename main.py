@@ -23,8 +23,8 @@ def main() -> None:
     app.setStyleSheet(stylesheet)
     app.setStyle('fusion')
 
-    window.activateWindow()
     window.setFocus()
+    window.activateWindow()
 
     handle = app.exec()
     sys.exit(handle)

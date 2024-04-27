@@ -23,7 +23,7 @@ class Preferences(Floating):
         self.parser = parser
 
         self.setWindowTitle('Preferences')
-        self.setFixedSize(400, 200)
+        self.setFixedSize(350, 150)
 
         self.layout = QVBoxLayout(self)
 
@@ -74,6 +74,7 @@ class Preferences(Floating):
 
         self.layout.addLayout(dlayout)
         self.layout.addLayout(slayout)
+        self.layout.addSpacing(20)
         self.layout.addLayout(group)
 
         self.setLayout(self.layout)

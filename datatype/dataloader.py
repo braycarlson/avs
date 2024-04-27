@@ -22,7 +22,6 @@ class Dataloader:
         self.filelist = None
         self.parser = parser
         self.realtime = False
-        self.ui = None
 
     @property
     def empty(self) -> bool:
@@ -76,13 +75,8 @@ class Dataloader:
 
         return Settings.from_file(path)
 
-    def signal(self) -> Signal:
-        if hasattr(self.current, 'signal'):
-            signal = self.current.signal
-
-        settings = self.settings()
-
-        if not hasattr(self.current, 'signal') or settings.realtime:
+    def signal(self, settings: Settings = None) -> Signal:
+        if settings.realtime:
             path = (
                 self
                 .parser
@@ -133,7 +127,12 @@ class Dataloader:
                 if function in callback:
                     callback[function]()
 
-        return signal
+            return signal, settings
+
+        current = self.settings()
+        current.update(settings.__dict__)
+
+        return self.current.signal, current
 
     def reload(self) -> None:
         self.dataframe = self.dataset.load_buffer(self.index)
