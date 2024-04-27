@@ -96,10 +96,12 @@ class Window(QMainWindow):
 
         self.previous = QPushButton('Previous')
         self.generate = QPushButton('Generate')
+        self.save = QPushButton('Save')
         self.next = QPushButton('Next')
 
         self.previous.setFixedSize(150, 30)
         self.generate.setFixedSize(150, 30)
+        self.save.setFixedSize(150, 30)
         self.next.setFixedSize(150, 30)
 
         self.generate.setObjectName('Generate')
@@ -107,6 +109,7 @@ class Window(QMainWindow):
         self.sublayout.addStretch(1)
         self.sublayout.addWidget(self.previous)
         self.sublayout.addWidget(self.generate)
+        self.sublayout.addWidget(self.save)
         self.sublayout.addWidget(self.next)
         self.sublayout.addStretch(1)
 
@@ -119,6 +122,7 @@ class Window(QMainWindow):
 
         self.next.clicked.connect(self.on_next)
         self.generate.clicked.connect(self.on_generate)
+        self.save.clicked.connect(self.on_click_save)
         self.previous.clicked.connect(self.on_previous)
         self.explorer.box.currentIndexChanged.connect(self.on_file_change)
         self.explorer.button.clicked.connect(self.on_click_load)
@@ -129,6 +133,7 @@ class Window(QMainWindow):
         self.menu.settings.connect(self.on_click_settings)
         self.menu.save.connect(self.on_click_save)
         self.menu.exit.connect(QApplication.quit)
+        self.scrollable.error.connect(self.on_error)
 
     def create(self) -> None:
         if len(self.explorer.box) == 0:
@@ -167,6 +172,9 @@ class Window(QMainWindow):
             settings
         )
 
+    def on_error(self, message: str) -> None:
+        QMessageBox.critical(self, 'Error', message)
+
     def on_generate(self) -> None:
         if len(self.explorer.box) == 0:
             QMessageBox.warning(
@@ -177,21 +185,30 @@ class Window(QMainWindow):
 
             return
 
+        draw = False
+
         index = self.explorer.box.currentText()
         self.dataloader.update(index)
 
-        self.scrollable.canvas.cleanup()
+        previous = self.dataloader.settings()
 
         parameters = self.parameter.get()
         settings = Settings.from_dict(parameters)
 
-        self.scrollable.canvas.clear()
-        settings['exclude'] = []
+        if not settings.is_same(previous):
+            draw = True
 
-        self.scrollable.display(
-            self.dataloader.current.signal,
-            settings
-        )
+        signal, settings = self.dataloader.signal(settings=settings)
+
+        if draw:
+            self.scrollable.canvas.cleanup()
+            self.scrollable.canvas.clear()
+            settings['exclude'] = []
+
+            self.scrollable.display(
+                signal,
+                settings
+            )
 
     def on_next(self) -> None:
         if len(self.explorer.box) == 0:
@@ -235,25 +252,22 @@ class Window(QMainWindow):
         index = self.explorer.box.currentText()
         self.dataloader.update(index)
 
+        self.refresh()
+
+    def refresh(self) -> None:
         self.update()
 
         self.scrollable.canvas.clear()
         self.scrollable.canvas.cleanup()
 
-        self.scrollable.display(
-            self.dataloader.current.signal,
-            self.dataloader.current.settings
-        )
+        parameters = self.parameter.get()
+        settings = Settings.from_dict(parameters)
 
-        self.refresh()
-
-    def refresh(self) -> None:
-        self.scrollable.canvas.clear()
-        self.scrollable.canvas.cleanup()
+        signal, settings = self.dataloader.signal(settings=settings)
 
         self.scrollable.display(
-            self.dataloader.current.signal,
-            self.dataloader.current.settings
+            signal,
+            settings
         )
 
     def update(self) -> None:
@@ -381,6 +395,8 @@ class Window(QMainWindow):
         self.parameter.update(settings)
 
         self.create()
+
+        self.dataloader.baseline = False
 
     def on_click_reset_custom(self) -> None:
         if len(self.explorer.box) == 0:

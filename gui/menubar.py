@@ -73,37 +73,47 @@ class Menubar(QMenuBar):
         # Theme
         themes = self.addMenu('&Themes')
 
-        brackets = QAction('Brackets', parent=self)
-        dracula = QAction('Dracula', parent=self)
-        gruvbox = QAction('Gruvbox', parent=self)
-        onedark = QAction('One Dark', parent=self)
-        rosepine = QAction('Rose Pine', parent=self)
+        self.brackets = QAction('Brackets', parent=self)
+        self.brackets.setCheckable(True)
 
-        brackets.triggered.connect(
+        self.dracula = QAction('Dracula', parent=self)
+        self.dracula.setCheckable(True)
+
+        self.gruvbox = QAction('Gruvbox', parent=self)
+        self.gruvbox.setCheckable(True)
+
+        self.onedark = QAction('One Dark', parent=self)
+        self.onedark.setCheckable(True)
+
+        self.rosepine = QAction('Rose Pine', parent=self)
+        self.rosepine.setCheckable(True)
+        self.rosepine.setChecked(True)
+
+        self.brackets.triggered.connect(
             lambda: self.on_change_theme('brackets')
         )
 
-        gruvbox.triggered.connect(
+        self.gruvbox.triggered.connect(
             lambda: self.on_change_theme('gruvbox')
         )
 
-        dracula.triggered.connect(
+        self.dracula.triggered.connect(
             lambda: self.on_change_theme('dracula')
         )
 
-        onedark.triggered.connect(
+        self.onedark.triggered.connect(
             lambda: self.on_change_theme('onedark')
         )
 
-        rosepine.triggered.connect(
+        self.rosepine.triggered.connect(
             lambda: self.on_change_theme('rosepine')
         )
 
-        themes.addAction(brackets)
-        themes.addAction(dracula)
-        themes.addAction(gruvbox)
-        themes.addAction(onedark)
-        themes.addAction(rosepine)
+        themes.addAction(self.brackets)
+        themes.addAction(self.dracula)
+        themes.addAction(self.gruvbox)
+        themes.addAction(self.onedark)
+        themes.addAction(self.rosepine)
 
         # Help
         help = self.addMenu("&Help")
@@ -116,9 +126,20 @@ class Menubar(QMenuBar):
         help.addAction(about)
 
     def on_change_theme(self, name: str) -> None:
+        action = {
+            'brackets': self.brackets,
+            'dracula': self.dracula,
+            'gruvbox': self.gruvbox,
+            'onedark': self.onedark,
+            'rosepine': self.rosepine
+        }
+
         if name in MAPPING:
             theme = MAPPING[name]
             self.theme.emit(theme)
+
+            for k, v in action.items():
+                v.setChecked(k == name)
 
     def on_click_about(self) -> None:
         if self.about is not None:

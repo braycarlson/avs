@@ -5,7 +5,7 @@ from datatype.segmentation import DynamicThresholdSegmentation
 from datatype.spectrogram import Linear, Spectrogram
 from matplotlib.backend_bases import MouseButton
 from matplotlib.patches import Rectangle
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import pyqtSignal, Qt
 from PyQt6.QtGui import QResizeEvent
 from PyQt6.QtWidgets import (
     QVBoxLayout,
@@ -23,6 +23,8 @@ if TYPE_CHECKING:
 
 
 class ScrollableWindow(QWidget):
+    error = pyqtSignal(str)
+
     def __init__(self, fig: Figure, ax: Axes):
         super().__init__()
 
@@ -175,14 +177,25 @@ class ScrollableWindow(QWidget):
         )
 
         spectrogram = Spectrogram(strategy=strategy)
-        spectrogram = spectrogram.generate()
+
+        try:
+            spectrogram = spectrogram.generate()
+        except Exception as exception:
+            message = str(exception)
+            self.error.emit(message)
+            return
 
         algorithm = DynamicThresholdSegmentation(
             signal=signal,
             settings=settings
         )
 
-        algorithm.start()
+        try:
+            algorithm.start()
+        except Exception as exception:
+            message = str(exception)
+            self.error.emit(message)
+            return
 
         onsets = algorithm.component.get('onset')
         offsets = algorithm.component.get('offset')
@@ -284,23 +297,6 @@ class ScrollableWindow(QWidget):
         palette.setColor(self.backgroundRole(), theme["base"])
         palette.setColor(self.foregroundRole(), theme["text"])
         self.setPalette(palette)
-
-        self.scroll.setStyleSheet(f"background-color: {theme['surface'].name()};")
-        self.canvas.setStyleSheet(f"background-color: {theme['overlay'].name()}; color: {theme['text'].name()};")
-
-        self.canvas.figure.set_facecolor(theme["base"].name())
-        self.canvas.ax.set_facecolor(theme["surface"].name())
-
-        self.canvas.ax.tick_params(colors=theme["text"].name(), which='both')
-        self.canvas.ax.xaxis.label.set_color(theme["text"].name())
-        self.canvas.ax.yaxis.label.set_color(theme["text"].name())
-        self.canvas.ax.title.set_color(theme["text"].name())
-
-        for line in self.canvas.ax.lines:
-            line.set_color(theme["link"].name())
-
-        for patch in self.canvas.ax.patches:
-            patch.set_edgecolor(theme["highlight"].name())
 
         self.canvas.apply(theme)
         self.canvas.draw_idle()
