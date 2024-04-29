@@ -6,6 +6,7 @@ noisereduce
 numpy
 pandas
 platformdirs
+pyarrow
 PyQt6
 scipy
 seaborn
